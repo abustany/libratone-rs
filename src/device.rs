@@ -1,4 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{anyhow, Context, Result};
 
@@ -11,7 +11,7 @@ use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::PacketSender;
 
-type DeviceID = String;
+pub type DeviceID = String;
 
 #[derive(Clone, Debug)]
 pub struct Device {
@@ -23,13 +23,21 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn new(id: DeviceID, addr: IpAddr) -> Device {
+    fn new(id: DeviceID, addr: IpAddr) -> Device {
         Device {
             id,
             addr,
             name: None,
             volume: None,
         }
+    }
+
+    pub fn id(&self) -> DeviceID {
+        self.id.clone()
+    }
+
+    pub fn addr(&self) -> IpAddr {
+        self.addr
     }
 
     pub fn name(&self) -> Option<String> {
@@ -39,14 +47,15 @@ impl Device {
 
 #[derive(Clone, Debug)]
 pub enum DeviceManagerEvent {
-    DeviceDiscovered(DeviceID),
+    DeviceDiscovered(Device),
     DeviceUpdated(Device),
 }
 
-struct DeviceManagerData {
-    event_listeners: Vec<std::sync::mpsc::Sender<DeviceManagerEvent>>,
-    sock_send: UdpSocket,
-    devices: std::collections::HashMap<String, Device>,
+// crate-public so that the fake device manager can use it
+pub(crate) struct DeviceManagerData {
+    pub(crate) event_listeners: Vec<std::sync::mpsc::Sender<DeviceManagerEvent>>,
+    pub(crate) sock_send: Box<dyn PacketSender + Send>,
+    pub(crate) devices: std::collections::HashMap<String, Device>,
 }
 
 pub struct DeviceManager {
@@ -63,7 +72,7 @@ impl DeviceManager {
             .bind((ADDR_ANY, 0))?;
         let data = std::sync::Arc::new(std::sync::Mutex::new(DeviceManagerData {
             event_listeners: vec![],
-            sock_send,
+            sock_send: Box::new(sock_send),
             devices: std::collections::HashMap::new(),
         }));
 
@@ -247,21 +256,21 @@ impl DeviceManagerData {
         }
     }
 
-    fn register_device(&mut self, info: &discovery_reply::DiscoveryReply) {
+    pub(crate) fn register_device(&mut self, info: &discovery_reply::DiscoveryReply) {
         if self.devices.contains_key(&info.device_id) {
             return;
         }
 
-        let device_id = info.device_id.clone();
+        let device = Device::new(info.device_id.clone(), info.ip_address);
         self.devices.insert(
-            info.device_id.clone(),
-            Device::new(device_id.clone(), info.ip_address),
+            device.id.clone(),
+            device.clone(),
         );
 
-        self.send_event(DeviceManagerEvent::DeviceDiscovered(device_id));
+        self.send_event(DeviceManagerEvent::DeviceDiscovered(device));
     }
 
-    fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
+    pub(crate) fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
         match self.devices.get(device_id) {
             Some(device) => {
                 self.sock_send.send_packet(
@@ -277,13 +286,12 @@ impl DeviceManagerData {
     fn handle_notification(&mut self, addr: SocketAddr, packet: &protocol::Packet) -> Result<()> {
         let notif_ack_addr = SocketAddr::new(addr.ip(), protocol::NOTIF_ACK_PORT);
         self.sock_send
-            .send_to(
+            .send_packet(
                 &protocol::Packet {
                     command: 2,
                     command_type: packet.command_type,
                     command_data: None,
-                }
-                .data(),
+                },
                 notif_ack_addr,
             )
             .context("error acknowledging notification")?;

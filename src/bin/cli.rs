@@ -2,10 +2,7 @@ use std::thread;
 
 use anyhow::Result;
 
-mod commands;
-mod device;
-mod discovery_reply;
-mod protocol;
+use libratone_rs::device;
 
 fn main() -> Result<()> {
     let device_manager = device::DeviceManager::new()?;
