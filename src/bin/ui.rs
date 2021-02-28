@@ -1,12 +1,15 @@
+use std::sync::Arc;
+
 use druid::{AppLauncher, PlatformError, Target, Widget, WindowDesc};
-use druid::im::hashmap;
+use druid::im::HashMap;
 use druid::widget::ViewSwitcher;
 
 use libratone_rs::device;
-use libratone_rs::ui::appstate::{AppState, Device, Route};
+use libratone_rs::device::DeviceManager;
+use libratone_rs::ui::appstate::{AppState, Route};
 use libratone_rs::ui::delegate::Delegate;
 use libratone_rs::ui::commands;
-use libratone_rs::fake::DeviceManager;
+use libratone_rs::fake::device_manager_config;
 use libratone_rs::ui::pages::device_details::*;
 use libratone_rs::ui::pages::device_list::*;
 
@@ -24,23 +27,10 @@ fn build_ui() -> impl Widget<AppState> {
 fn main() -> Result<(), PlatformError> {
     let mock_state = AppState{
         route: Route::DeviceList,
-        devices: hashmap![
-            "device-1".to_string() => Device{
-                id: "device-1".to_string(),
-                ip_addr: "10.0.0.1".to_string(),
-                name: None,
-                volume: None,
-            },
-            "device-2".to_string() => Device{
-                id: "device-2".to_string(),
-                ip_addr: "10.0.0.2".to_string(),
-                name: Some("this one has a name".to_string()),
-                volume: Some(33),
-            },
-        ],
+        devices: HashMap::new(),
     };
 
-    let device_manager = DeviceManager::new()?;
+    let device_manager = Arc::new(DeviceManager::new(device_manager_config()?)?);
     let device_manager_events = device_manager.listen();
 
     let window = WindowDesc::new(build_ui)
@@ -48,7 +38,9 @@ fn main() -> Result<(), PlatformError> {
 
     let app = AppLauncher::with_window(window)
         .use_simple_logger()
-        .delegate(Delegate{});
+        .delegate(Delegate{
+            device_manager: Arc::clone(&device_manager),
+        });
 
     let event_sink = app.get_external_handle();
 

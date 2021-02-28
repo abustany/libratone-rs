@@ -23,7 +23,7 @@ impl From<device::Device> for Device {
             id: d.id(),
             ip_addr: d.addr().to_string(),
             name: d.name(),
-            volume: None,
+            volume: d.volume(),
         }
     }
 }

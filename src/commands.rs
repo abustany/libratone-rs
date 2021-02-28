@@ -5,8 +5,8 @@ use serde::Deserialize;
 
 use crate::protocol;
 
-const COMMAND_TYPE_FETCH: u8 = 1;
-const COMMAND_TYPE_SET: u8 = 2;
+pub(crate) const COMMAND_TYPE_FETCH: u8 = 1;
+pub(crate) const COMMAND_TYPE_SET: u8 = 2;
 
 pub enum CommandType {
     Fetch,

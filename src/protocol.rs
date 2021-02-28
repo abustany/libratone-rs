@@ -83,24 +83,15 @@ impl PacketSender for std::sync::Arc<UdpSocket> {
 }
 
 pub trait PacketReceiver {
-    fn receive_packet(&self) -> Result<Packet>;
+    fn receive_packet(&self) -> Result<(SocketAddr, Packet)>;
 }
 
 impl PacketReceiver for UdpSocket {
-    fn receive_packet(&self) -> Result<Packet> {
+    fn receive_packet(&self) -> Result<(SocketAddr, Packet)> {
         let mut recv_buffer = vec![0; 65536];
-        let (count, _) = self.recv_from(&mut recv_buffer)?;
+        let (count, from_addr, ) = self.recv_from(&mut recv_buffer)?;
 
-        Packet::parse(&recv_buffer[..count])
-    }
-}
-
-impl PacketReceiver for std::sync::Arc<UdpSocket> {
-    fn receive_packet(&self) -> Result<Packet> {
-        let mut recv_buffer = vec![0; 65536];
-        let (count, _) = self.recv_from(&mut recv_buffer)?;
-
-        Packet::parse(&recv_buffer[..count])
+        Ok((from_addr, Packet::parse(&recv_buffer[..count])?))
     }
 }
 

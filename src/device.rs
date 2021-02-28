@@ -1,4 +1,5 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 
@@ -9,7 +10,7 @@ use crate::commands;
 use crate::commands::Command;
 use crate::discovery_reply;
 use crate::protocol;
-use crate::protocol::PacketSender;
+use crate::protocol::{PacketReceiver, PacketSender};
 
 pub type DeviceID = String;
 
@@ -43,6 +44,10 @@ impl Device {
     pub fn name(&self) -> Option<String> {
         self.name.clone()
     }
+
+    pub fn volume(&self) -> Option<u8> {
+        self.volume
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -51,69 +56,108 @@ pub enum DeviceManagerEvent {
     DeviceUpdated(Device),
 }
 
-// crate-public so that the fake device manager can use it
-pub(crate) struct DeviceManagerData {
-    pub(crate) event_listeners: Vec<std::sync::mpsc::Sender<DeviceManagerEvent>>,
-    pub(crate) sock_send: Box<dyn PacketSender + Send>,
-    pub(crate) devices: std::collections::HashMap<String, Device>,
+struct DeviceManagerData {
+    event_listeners: Vec<std::sync::mpsc::Sender<DeviceManagerEvent>>,
+    sock_send: Box<dyn PacketSender + Send>,
+    devices: std::collections::HashMap<String, Device>,
 }
 
 pub struct DeviceManager {
-    data: std::sync::Arc<std::sync::Mutex<DeviceManagerData>>,
+    data: Arc<std::sync::Mutex<DeviceManagerData>>,
 }
 
 const ADDR_ANY: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);
 
+pub trait NetworkImpl {
+    fn packet_sender(&self) -> Result<Box<dyn PacketSender + Send>>;
+    fn packet_receiver(&self, port: u16) -> Result<Box<dyn PacketReceiver + Send>>;
+}
+
+pub trait DeviceDiscoveryImpl {
+    fn discover(&self) -> Result<()>;
+    fn poll(&self) -> Result<discovery_reply::DiscoveryReply>;
+}
+
+type ThreadsafeNetworkImpl = Box<dyn NetworkImpl + Send + Sync + 'static>;
+type ThreadsafeDeviceDiscoveryImpl = Box<dyn DeviceDiscoveryImpl + Send + Sync + 'static>;
+
+pub struct DeviceManagerConfig {
+    network_impl: Arc<ThreadsafeNetworkImpl>,
+    device_discovery_impl: Arc<ThreadsafeDeviceDiscoveryImpl>,
+}
+
+impl DeviceManagerConfig {
+    pub fn default() -> Result<Self> {
+        Ok(DeviceManagerConfig{
+            network_impl: Arc::new(Box::new(RealNetworkImpl{})),
+            device_discovery_impl: Arc::new(Box::new(SSDPDiscovery::new()?)),
+        })
+    }
+
+    pub fn new(
+        network_impl: ThreadsafeNetworkImpl,
+        device_discovery_impl: ThreadsafeDeviceDiscoveryImpl,
+    ) -> Self {
+        DeviceManagerConfig{
+            network_impl: Arc::new(network_impl),
+            device_discovery_impl: Arc::new(device_discovery_impl),
+        }
+    }
+}
+
 impl DeviceManager {
-    pub fn new() -> Result<DeviceManager> {
-        let sock_send = net2::UdpBuilder::new_v4()?
-            .reuse_address(true)?
-            .reuse_port(true)?
-            .bind((ADDR_ANY, 0))?;
-        let data = std::sync::Arc::new(std::sync::Mutex::new(DeviceManagerData {
+    pub fn new(config: DeviceManagerConfig) -> Result<DeviceManager> {
+        let sock_send = config.network_impl.packet_sender()?;
+        let data = Arc::new(std::sync::Mutex::new(DeviceManagerData {
             event_listeners: vec![],
-            sock_send: Box::new(sock_send),
+            sock_send,
             devices: std::collections::HashMap::new(),
         }));
 
         {
-            let data = std::sync::Arc::clone(&data);
+            let data = Arc::clone(&data);
+            let device_discovery_impl = Arc::clone(&config.device_discovery_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("discovery", Self::discovery_thread, data);
+                Self::thread_manager("discovery", Self::discovery_thread, data, device_discovery_impl);
             });
         }
 
         {
-            let data = std::sync::Arc::clone(&data);
+            let data = Arc::clone(&data);
+            let network_impl = Arc::clone(&config.network_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("notification", Self::notification_thread, data);
+                Self::thread_manager("notification", Self::notification_thread, data, network_impl);
             });
         }
 
         {
-            let data = std::sync::Arc::clone(&data);
+            let data = Arc::clone(&data);
+            let network_impl = Arc::clone(&config.network_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("command reply", Self::command_reply_thread, data);
+                Self::thread_manager("command reply", Self::command_reply_thread, data, network_impl);
             });
         }
 
         Ok(DeviceManager { data })
     }
 
-    fn thread_manager<F>(
+    fn thread_manager<F, T>(
         thread_name: &'static str,
         thread_func: F,
-        data: std::sync::Arc<std::sync::Mutex<DeviceManagerData>>,
+        data: Arc<std::sync::Mutex<DeviceManagerData>>,
+        extra: Arc<T>,
     ) where
-        F: Fn(std::sync::Arc<std::sync::Mutex<DeviceManagerData>>) -> Result<()>,
+        F: Fn(Arc<std::sync::Mutex<DeviceManagerData>>, Arc<T>) -> Result<()>,
+        T: Send + 'static,
     {
         loop {
-            let data = std::sync::Arc::clone(&data);
+            let data = Arc::clone(&data);
+            let extra = Arc::clone(&extra);
 
-            match thread_func(data) {
+            match thread_func(data, extra) {
                 Err(err) => {
                     println!("error in thread {}: {}", thread_name, err);
                     std::thread::sleep(std::time::Duration::from_secs(5));
@@ -125,74 +169,39 @@ impl DeviceManager {
         }
     }
 
-    fn discovery_thread(data: std::sync::Arc<std::sync::Mutex<DeviceManagerData>>) -> Result<()> {
-        const SSDP_MULTICAST_ADDR: Ipv4Addr = Ipv4Addr::new(239, 255, 255, 250);
-        const SSDP_MULTICAST_PORT: u16 = 1800; // for some reason not the standard one
-        const SEARCH_REQUEST_BODY: &'static str = "M-SEARCH * HTTP/1.1";
-
-        let sock = net2::UdpBuilder::new_v4()?
-            .reuse_address(true)?
-            .reuse_port(true)?
-            .bind((ADDR_ANY, SSDP_MULTICAST_PORT))
-            .context("error creating socket")?;
-
-        sock.send_to(
-            SEARCH_REQUEST_BODY.as_bytes(),
-            SocketAddr::new(IpAddr::V4(SSDP_MULTICAST_ADDR), SSDP_MULTICAST_PORT),
-        )
-        .context("error sending discovery packet")?;
-
-        let mut recv_buffer = vec![0; 4096];
+    fn discovery_thread(data: Arc<std::sync::Mutex<DeviceManagerData>>, device_discovery_impl: Arc<ThreadsafeDeviceDiscoveryImpl>) -> Result<()> {
+        device_discovery_impl
+            .discover()
+            .context("error sending discovery packet")?;
 
         loop {
-            let (count, from_addr) = sock
-                .recv_from(&mut recv_buffer)
-                .context("error receiving discovery packet")?;
+            let device_discovery_impl = Arc::clone(&device_discovery_impl);
 
-            if count == 0 {
-                continue;
-            }
-
-            match discovery_reply::DiscoveryReply::parse(&recv_buffer[..count]) {
+            match device_discovery_impl.poll() {
                 Ok(x) => {
-                    let data = std::sync::Arc::clone(&data);
+                    let data = Arc::clone(&data);
                     let mut data = data.lock().unwrap();
                     data.register_device(&x);
                 }
                 Err(err) => {
-                    println!(
-                        "Skipping invalid discovery reply from {} ({})",
-                        from_addr, err
-                    );
+                    println!("Error processing discovery reply: {}", err);
                     continue;
                 }
             };
         }
     }
 
-    fn packet_receiver<F>(port: u16, packet_func: F) -> Result<()>
+    fn packet_receiver_thread<F>(network_impl: Arc<ThreadsafeNetworkImpl>, port: u16, packet_func: F) -> Result<()>
     where
         F: Fn(SocketAddr, &protocol::Packet) -> Result<()>,
     {
-        let sock = net2::UdpBuilder::new_v4()?
-            .reuse_address(true)?
-            .reuse_port(true)?
-            .bind((ADDR_ANY, port))
-            .context("error creating socket")?;
-
-        let mut recv_buffer = vec![0; 65536];
+        let packet_receiver = network_impl
+            .packet_receiver(port)
+            .context("error creating packet receiver")?;
 
         loop {
-            let (count, from_addr) = sock
-                .recv_from(&mut recv_buffer)
-                .context("error receiving discovery packet")?;
-
-            if count == 0 {
-                continue;
-            }
-
-            match protocol::Packet::parse(&recv_buffer[..count]) {
-                Ok(packet) => {
+            match packet_receiver.receive_packet() {
+                Ok((from_addr, packet)) => {
                     if let Err(err) = packet_func(from_addr, &packet) {
                         println!("error handling packet from device {}: {}", from_addr, err);
                     }
@@ -205,20 +214,22 @@ impl DeviceManager {
     }
 
     fn notification_thread(
-        data: std::sync::Arc<std::sync::Mutex<DeviceManagerData>>,
+        data: Arc<std::sync::Mutex<DeviceManagerData>>,
+        network_impl: Arc<ThreadsafeNetworkImpl>,
     ) -> Result<()> {
-        Self::packet_receiver(protocol::NOTIF_RECV_PORT, |from_addr, packet| {
-            let data = std::sync::Arc::clone(&data);
+        Self::packet_receiver_thread(network_impl, protocol::NOTIF_RECV_PORT, |from_addr, packet| {
+            let data = Arc::clone(&data);
             let mut data = data.lock().unwrap();
             data.handle_notification(from_addr, &packet)
         })
     }
 
     fn command_reply_thread(
-        data: std::sync::Arc<std::sync::Mutex<DeviceManagerData>>,
+        data: Arc<std::sync::Mutex<DeviceManagerData>>,
+        network_impl: Arc<ThreadsafeNetworkImpl>,
     ) -> Result<()> {
-        Self::packet_receiver(protocol::CMD_RESP_PORT, |from_addr, packet| {
-            let data = std::sync::Arc::clone(&data);
+        Self::packet_receiver_thread(network_impl, protocol::CMD_RESP_PORT, |from_addr, packet| {
+            let data = Arc::clone(&data);
             let mut data = data.lock().unwrap();
             data.handle_command_response(from_addr, &packet)
         })
@@ -227,7 +238,7 @@ impl DeviceManager {
     pub fn listen(&self) -> std::sync::mpsc::Receiver<DeviceManagerEvent> {
         let (tx, rx) = std::sync::mpsc::channel();
 
-        let data = std::sync::Arc::clone(&self.data);
+        let data = Arc::clone(&self.data);
         let mut data = data.lock().unwrap();
         data.event_listeners.push(tx);
 
@@ -235,9 +246,18 @@ impl DeviceManager {
     }
 
     pub fn fetch_info(&self, device_id: &DeviceID) -> Result<()> {
-        let data = std::sync::Arc::clone(&self.data);
+        let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
-        data.send_packet(device_id, &commands::DeviceName::fetch())
+        data.send_packet(device_id, &commands::DeviceName::fetch())?;
+        data.send_packet(device_id, &commands::Volume::fetch())?;
+
+        Ok(())
+    }
+
+    pub fn set_volume(&self, device_id: &DeviceID, volume: u8) -> Result<()> {
+        let data = Arc::clone(&self.data);
+        let data = data.lock().unwrap();
+        data.send_packet(device_id, &commands::Volume::set(volume.clamp(0 , 100)))
     }
 }
 
@@ -256,7 +276,7 @@ impl DeviceManagerData {
         }
     }
 
-    pub(crate) fn register_device(&mut self, info: &discovery_reply::DiscoveryReply) {
+    fn register_device(&mut self, info: &discovery_reply::DiscoveryReply) {
         if self.devices.contains_key(&info.device_id) {
             return;
         }
@@ -270,7 +290,7 @@ impl DeviceManagerData {
         self.send_event(DeviceManagerEvent::DeviceDiscovered(device));
     }
 
-    pub(crate) fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
+    fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
         match self.devices.get(device_id) {
             Some(device) => {
                 self.sock_send.send_packet(
@@ -356,5 +376,67 @@ impl DeviceManagerData {
             }
             _ => Ok(None),
         }
+    }
+}
+
+struct RealNetworkImpl;
+
+impl NetworkImpl for RealNetworkImpl {
+    fn packet_sender(&self) -> Result<Box<dyn PacketSender + Send>> {
+        let sock = net2::UdpBuilder::new_v4()?
+            .reuse_address(true)?
+            .reuse_port(true)?
+            .bind((ADDR_ANY, 0))?;
+        Ok(Box::new(sock))
+    }
+
+    fn packet_receiver(&self, port: u16) -> Result<Box<dyn PacketReceiver + Send>> {
+        let sock = net2::UdpBuilder::new_v4()?
+            .reuse_address(true)?
+            .reuse_port(true)?
+            .bind((ADDR_ANY, port))
+            .context("error creating socket")?;
+
+        Ok(Box::new(sock))
+    }
+}
+
+struct SSDPDiscovery {
+    sock: UdpSocket,
+}
+
+const SSDP_MULTICAST_PORT: u16 = 1800; // for some reason not the standard one
+
+impl SSDPDiscovery {
+    fn new() -> Result<SSDPDiscovery> {
+        let sock = net2::UdpBuilder::new_v4()?
+            .reuse_address(true)?
+            .reuse_port(true)?
+            .bind((ADDR_ANY, SSDP_MULTICAST_PORT))
+            .context("error creating socket")?;
+
+        Ok(SSDPDiscovery{sock})
+    }
+}
+
+impl DeviceDiscoveryImpl for SSDPDiscovery {
+    fn discover(&self) -> Result<()> {
+        const SSDP_MULTICAST_ADDR: Ipv4Addr = Ipv4Addr::new(239, 255, 255, 250);
+        const SEARCH_REQUEST_BODY: &'static str = "M-SEARCH * HTTP/1.1";
+
+        self.sock.send_to(
+            SEARCH_REQUEST_BODY.as_bytes(),
+            SocketAddr::new(IpAddr::V4(SSDP_MULTICAST_ADDR), SSDP_MULTICAST_PORT),
+        )?;
+        Ok(())
+    }
+
+    fn poll(&self) -> Result<discovery_reply::DiscoveryReply> {
+        let mut recv_buffer = vec![0; 4096];
+        let (count, _) = self.sock
+            .recv_from(&mut recv_buffer)
+            .context("error receiving discovery packet")?;
+
+        discovery_reply::DiscoveryReply::parse(&recv_buffer[..count])
     }
 }
