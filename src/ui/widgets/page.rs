@@ -11,12 +11,14 @@ impl Page {
     ) -> impl Widget<T> + 'static
     where F: Fn(&T) -> String + 'static
     {
+        const PADDING: f64 = 10.0;
+
         let mut header_row = Flex::row()
             .must_fill_main_axis(true)
             .main_axis_alignment(MainAxisAlignment::Center);
 
         if let Some(button) = back_button {
-            header_row.add_child(button);
+            header_row.add_child(Padding::new((0.0, 0.0, PADDING, 0.0), button));
         }
 
         header_row.add_flex_child(
@@ -24,10 +26,10 @@ impl Page {
             1.0,
         );
 
-        let header = Padding::new(10.0, header_row);
+        let header = Padding::new(PADDING, header_row);
 
         Flex::column()
             .with_child(header)
-            .with_flex_child(content, 1.0)
+            .with_flex_child(Padding::new((PADDING, 0.0, PADDING, PADDING), content), 1.0)
     }
 }

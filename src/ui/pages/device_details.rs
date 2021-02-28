@@ -32,6 +32,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
 
     let volume_slider = Slider::new()
         .with_range(0.0, 100.0)
+        .expand_width()
         .lens(
             Device::volume.map(
                 |x| x.unwrap_or(0).into(),
