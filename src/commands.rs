@@ -176,7 +176,7 @@ pub fn hello(our_addr: &IpAddr) -> protocol::Packet {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PlayControlCommand {
     Play,
     Stop,
