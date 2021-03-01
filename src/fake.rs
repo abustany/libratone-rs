@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -57,7 +58,10 @@ impl FakeNetwork {
 
 impl NetworkImpl for FakeNetwork {
     fn packet_sender(&self) -> Result<Box<dyn PacketSender + Send>> {
-        Ok(Box::new(FakePacketSender{reply_senders: Arc::clone(&self.reply_senders)}))
+        Ok(Box::new(FakePacketSender{
+            reply_senders: Arc::clone(&self.reply_senders),
+            playing: Arc::new(Mutex::new(Cell::new(false))),
+        }))
     }
 
     fn packet_receiver(&self, port: u16) -> Result<Box<dyn PacketReceiver + Send>> {
@@ -67,6 +71,7 @@ impl NetworkImpl for FakeNetwork {
 
 struct FakePacketSender {
     reply_senders: Arc<Mutex<HashMap<u16, FakeSocket>>>,
+    playing: Arc<Mutex<Cell<bool>>>,
 }
 
 impl FakePacketSender {
@@ -117,6 +122,33 @@ impl PacketSender for FakePacketSender {
                             command_type: commands::COMMAND_TYPE_SET,
                             command: commands::Volume::NOTIFY_ID,
                             command_data: packet.command_data.clone(),
+                        },
+                    )
+                },
+                commands::PlayControl::SET_COMMAND_ID => {
+                    println!("faking PlayControl notification");
+                    let now_playing = {
+                        let playing = Arc::clone(&self.playing);
+                        let playing = playing.lock().unwrap();
+                        let command_data = String::from_utf8_lossy(packet.command_data.as_ref().unwrap());
+
+                        match command_data.as_ref() {
+                            "PLAY" => { playing.set(true); }
+                            "PAUSE" | "STOP" => { playing.set(false); }
+                            "TOGGL" => { playing.set(!playing.get()); }
+                            _ => {}
+                        };
+
+                        playing.get()
+                    };
+                    let notification_data: Vec<u8> = vec![if now_playing { 48 } else { 49 }];
+
+                    self.reply(
+                        SocketAddr::new(to.ip(), NOTIF_RECV_PORT),
+                        Packet {
+                            command_type: commands::COMMAND_TYPE_SET,
+                            command: commands::PlayControl::NOTIFY_ID,
+                            command_data: Some(notification_data),
                         },
                     )
                 },
