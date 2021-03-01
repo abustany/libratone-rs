@@ -79,6 +79,7 @@ pub fn format_reply(p: &protocol::Packet) -> String {
         Capabilities::GET_COMMAND_ID => Capabilities::format_reply(p),
         DeviceName::GET_COMMAND_ID => DeviceName::format_reply(p),
         FirmwareUpdate::GET_COMMAND_ID => FirmwareUpdate::format_reply(p),
+        PlayControl::GET_COMMAND_ID => PlayControl::format_reply(p),
         Volume::GET_COMMAND_ID => Volume::format_notification(p),
         _ => format!("{:?}", p),
     }
@@ -190,7 +191,7 @@ pub enum PlayControlCommand {
 pub struct PlayControl;
 
 impl Command<PlayControlCommand, PlayControlCommand> for PlayControl {
-    const GET_COMMAND_ID: u16 = 0; // cannot get?
+    const GET_COMMAND_ID: u16 = 51;
     const SET_COMMAND_ID: u16 = 40;
     const NOTIFY_ID: u16 = 51;
     const NAME: &'static str = "Play control";
