@@ -30,7 +30,10 @@ pub trait Command<RequestDataType, ResponseDataType: std::fmt::Debug> {
                 CommandType::Fetch => 1,
                 CommandType::Set => 2,
             },
-            command: Self::GET_COMMAND_ID,
+            command: match command_type {
+                CommandType::Fetch => Self::GET_COMMAND_ID,
+                CommandType::Set => Self::SET_COMMAND_ID,
+            },
             command_data: data.map(Self::marshal_data),
         }
     }
