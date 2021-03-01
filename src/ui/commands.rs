@@ -8,7 +8,7 @@ pub struct ShowDeviceList;
 impl ShowDeviceList {
     pub const SELECTOR: Selector<()> = Selector::new("libratone.show-home");
 
-    pub fn new() -> Command {
+    pub fn command() -> Command {
         Command::new(Self::SELECTOR, (), Target::Auto)
     }
 }
@@ -18,7 +18,7 @@ pub struct ShowDeviceDetails;
 impl ShowDeviceDetails {
     pub const SELECTOR: Selector<String> = Selector::new("libratone.show-device");
 
-    pub fn new(device_id: &str) -> Command {
+    pub fn command(device_id: &str) -> Command {
         Command::new(Self::SELECTOR, device_id.to_owned(), Target::Auto)
     }
 }
@@ -32,7 +32,7 @@ pub struct SendCommand {
 impl SendCommand {
     pub const SELECTOR: Selector<SendCommand> = Selector::new("libratone.set-volume");
 
-    pub fn new(
+    pub fn command(
         device_id: &str,
         packet: Packet,
         optimistic_update: impl Fn(&mut Device) + 'static,
@@ -54,7 +54,7 @@ pub struct DeviceUpdated;
 impl DeviceUpdated {
     pub const SELECTOR: Selector<Device> = Selector::new("libratone.device-updated");
 
-    pub fn new(device: Device) -> Command {
+    pub fn command(device: Device) -> Command {
         Command::new(Self::SELECTOR, device, Target::Auto)
     }
 }

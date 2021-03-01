@@ -7,7 +7,7 @@ use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfoData};
 use crate::ui::appstate::{AppState, Device, DeviceMap};
 use crate::ui::commands::{SendCommand, ShowDeviceList};
 use crate::ui::controllers::VolumeController;
-use crate::ui::widgets::Page;
+use crate::ui::widgets;
 
 pub struct CurrentDeviceLens;
 
@@ -34,7 +34,7 @@ fn control_button(
     action: PlayControlCommand,
 ) -> impl Widget<Device> {
     Button::new(label).on_click(move |ctx: &mut EventCtx, device: &mut Device, _env| {
-        ctx.submit_command(SendCommand::new(
+        ctx.submit_command(SendCommand::command(
             &device.id,
             PlayControl::set(action),
             |_| {},
@@ -44,7 +44,7 @@ fn control_button(
 
 pub fn build_device_details() -> impl Widget<AppState> {
     let back_button = Button::new("←")
-        .on_click(|ctx, _app_state, _env| ctx.submit_command(ShowDeviceList::new()));
+        .on_click(|ctx, _app_state, _env| ctx.submit_command(ShowDeviceList::command()));
 
     let volume_slider =
         Slider::new()
@@ -99,7 +99,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
                     d.play_title
                         .as_ref()
                         .map(|x| x.to_owned())
-                        .unwrap_or_else(|| String::new())
+                        .unwrap_or_default()
                 }),
                 0.0,
             )
@@ -108,7 +108,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
                     d.play_subtitle
                         .as_ref()
                         .map(|x| x.to_owned())
-                        .unwrap_or_else(|| String::new())
+                        .unwrap_or_default()
                 }),
                 0.0,
             )
@@ -130,8 +130,8 @@ pub fn build_device_details() -> impl Widget<AppState> {
         .with_flex_child(Flex::row().with_flex_child(now_playing, 1.0), 0.0)
         .with_flex_child(controls, 0.0);
 
-    let page = Page::new(
-        |data: &Device| data.name.as_ref().unwrap_or_else(|| &data.id).to_owned(),
+    let page = widgets::page(
+        |data: &Device| data.name.as_ref().unwrap_or(&data.id).to_owned(),
         details,
         Some(Box::new(back_button)),
     );

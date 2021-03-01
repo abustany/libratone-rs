@@ -18,7 +18,7 @@ pub struct Device {
 
 impl Device {
     pub fn label(&self) -> &str {
-        self.name.as_ref().unwrap_or_else(|| &self.id)
+        self.name.as_ref().unwrap_or(&self.id)
     }
 }
 
@@ -29,8 +29,8 @@ impl From<device::Device> for Device {
             ip_addr: d.addr().to_string(),
             name: d.name(),
             volume: d.volume(),
-            play_status: d.play_status().map(|x| Arc::new(x)),
-            play_info: d.play_info().map(|x| Arc::new(x)),
+            play_status: d.play_status().map(Arc::new),
+            play_info: d.play_info().map(Arc::new),
         }
     }
 }

@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 
-use net2;
 use net2::unix::UnixUdpBuilderExt;
 
 use crate::commands;
@@ -12,11 +11,9 @@ use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::{PacketReceiver, PacketSender};
 
-pub type DeviceID = String;
-
 #[derive(Clone, Debug)]
 pub struct Device {
-    id: DeviceID,
+    id: String,
     addr: IpAddr,
 
     name: Option<String>,
@@ -26,7 +23,7 @@ pub struct Device {
 }
 
 impl Device {
-    fn new(id: DeviceID, addr: IpAddr) -> Device {
+    fn new(id: String, addr: IpAddr) -> Device {
         Device {
             id,
             addr,
@@ -37,7 +34,7 @@ impl Device {
         }
     }
 
-    pub fn id(&self) -> DeviceID {
+    pub fn id(&self) -> String {
         self.id.clone()
     }
 
@@ -54,7 +51,7 @@ impl Device {
     }
 
     pub fn play_status(&self) -> Option<PlayControlCommand> {
-        self.play_status.clone()
+        self.play_status
     }
 
     pub fn play_info(&self) -> Option<PlayInfoData> {
@@ -287,7 +284,7 @@ impl DeviceManager {
         rx
     }
 
-    pub fn fetch_info(&self, device_id: &DeviceID) -> Result<()> {
+    pub fn fetch_info(&self, device_id: &str) -> Result<()> {
         let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
         data.send_packet(device_id, &commands::DeviceName::fetch())?;
@@ -298,13 +295,13 @@ impl DeviceManager {
         Ok(())
     }
 
-    pub fn set_volume(&self, device_id: &DeviceID, volume: u8) -> Result<()> {
+    pub fn set_volume(&self, device_id: &str, volume: u8) -> Result<()> {
         let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
         data.send_packet(device_id, &commands::Volume::set(volume.clamp(0, 100)))
     }
 
-    pub fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
+    pub fn send_packet(&self, device_id: &str, packet: &protocol::Packet) -> Result<()> {
         let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
         data.send_packet(device_id, packet)
@@ -337,7 +334,7 @@ impl DeviceManagerData {
         self.send_event(DeviceManagerEvent::DeviceDiscovered(device));
     }
 
-    fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
+    fn send_packet(&self, device_id: &str, packet: &protocol::Packet) -> Result<()> {
         match self.devices.get(device_id) {
             Some(device) => {
                 self.sock_send.send_packet(
@@ -481,7 +478,7 @@ impl SSDPDiscovery {
 impl DeviceDiscoveryImpl for SSDPDiscovery {
     fn discover(&self) -> Result<()> {
         const SSDP_MULTICAST_ADDR: Ipv4Addr = Ipv4Addr::new(239, 255, 255, 250);
-        const SEARCH_REQUEST_BODY: &'static str = "M-SEARCH * HTTP/1.1";
+        const SEARCH_REQUEST_BODY: &str = "M-SEARCH * HTTP/1.1";
 
         self.sock.send_to(
             SEARCH_REQUEST_BODY.as_bytes(),

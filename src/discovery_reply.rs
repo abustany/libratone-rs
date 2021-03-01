@@ -22,8 +22,8 @@ impl DiscoveryReply {
         // For some reason Libratone devices add a space in the first line of
         // the response, between "HTTP/1.1" and the first "\r\n". This
         // confuses httparse, so strip it out.
-        const BROKEN_NOTIFY_PREFIX: &'static [u8] = "NOTIFY * HTTP/1.1 \r\n".as_bytes();
-        const FIXED_NOTIFY_PREFIX: &'static [u8] = "NOTIFY * HTTP/1.1\r\n".as_bytes();
+        const BROKEN_NOTIFY_PREFIX: &[u8] = "NOTIFY * HTTP/1.1 \r\n".as_bytes();
+        const FIXED_NOTIFY_PREFIX: &[u8] = "NOTIFY * HTTP/1.1\r\n".as_bytes();
 
         let input = if input.starts_with(BROKEN_NOTIFY_PREFIX) {
             Cow::Owned(

@@ -214,16 +214,16 @@ impl Command<PlayControlCommand, PlayControlCommand> for PlayControl {
     fn unmarshal_data(data: &[u8]) -> Result<PlayControlCommand> {
         // data is the ASCII code for a digit that is the 0 based command
         // index in the list above
-        match data {
-            &[48] => Ok(PlayControlCommand::Play),
-            &[49] => Ok(PlayControlCommand::Stop),
-            &[50] => Ok(PlayControlCommand::Pause),
-            &[51] => Ok(PlayControlCommand::Next),
-            &[52] => Ok(PlayControlCommand::Previous),
-            &[53] => Ok(PlayControlCommand::Toggle),
-            &[54] => Ok(PlayControlCommand::Mute),
-            &[55] => Ok(PlayControlCommand::Unmute),
-            &[other] => Err(anyhow!("invalid data: {}", other)),
+        match *data {
+            [48] => Ok(PlayControlCommand::Play),
+            [49] => Ok(PlayControlCommand::Stop),
+            [50] => Ok(PlayControlCommand::Pause),
+            [51] => Ok(PlayControlCommand::Next),
+            [52] => Ok(PlayControlCommand::Previous),
+            [53] => Ok(PlayControlCommand::Toggle),
+            [54] => Ok(PlayControlCommand::Mute),
+            [55] => Ok(PlayControlCommand::Unmute),
+            [other] => Err(anyhow!("invalid data: {}", other)),
             _ => Err(anyhow!("invalid data length")),
         }
     }

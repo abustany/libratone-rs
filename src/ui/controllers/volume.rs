@@ -18,7 +18,7 @@ impl<W: Widget<Device>> Controller<Device, W> for VolumeController {
     ) {
         if old_data.volume != data.volume && data.volume.is_some() {
             let volume = data.volume.unwrap();
-            ctx.submit_command(SendCommand::new(
+            ctx.submit_command(SendCommand::command(
                 &data.id,
                 Volume::set(volume),
                 Box::new(move |d: &mut Device| d.volume = Some(volume)),
