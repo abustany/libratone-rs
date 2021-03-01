@@ -100,8 +100,8 @@ pub struct DeviceManagerConfig {
 
 impl DeviceManagerConfig {
     pub fn default() -> Result<Self> {
-        Ok(DeviceManagerConfig{
-            network_impl: Arc::new(Box::new(RealNetworkImpl{})),
+        Ok(DeviceManagerConfig {
+            network_impl: Arc::new(Box::new(RealNetworkImpl {})),
             device_discovery_impl: Arc::new(Box::new(SSDPDiscovery::new()?)),
         })
     }
@@ -110,7 +110,7 @@ impl DeviceManagerConfig {
         network_impl: ThreadsafeNetworkImpl,
         device_discovery_impl: ThreadsafeDeviceDiscoveryImpl,
     ) -> Self {
-        DeviceManagerConfig{
+        DeviceManagerConfig {
             network_impl: Arc::new(network_impl),
             device_discovery_impl: Arc::new(device_discovery_impl),
         }
@@ -131,7 +131,12 @@ impl DeviceManager {
             let device_discovery_impl = Arc::clone(&config.device_discovery_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("discovery", Self::discovery_thread, data, device_discovery_impl);
+                Self::thread_manager(
+                    "discovery",
+                    Self::discovery_thread,
+                    data,
+                    device_discovery_impl,
+                );
             });
         }
 
@@ -140,7 +145,12 @@ impl DeviceManager {
             let network_impl = Arc::clone(&config.network_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("notification", Self::notification_thread, data, network_impl);
+                Self::thread_manager(
+                    "notification",
+                    Self::notification_thread,
+                    data,
+                    network_impl,
+                );
             });
         }
 
@@ -149,7 +159,12 @@ impl DeviceManager {
             let network_impl = Arc::clone(&config.network_impl);
 
             std::thread::spawn(|| {
-                Self::thread_manager("command reply", Self::command_reply_thread, data, network_impl);
+                Self::thread_manager(
+                    "command reply",
+                    Self::command_reply_thread,
+                    data,
+                    network_impl,
+                );
             });
         }
 
@@ -181,7 +196,10 @@ impl DeviceManager {
         }
     }
 
-    fn discovery_thread(data: Arc<std::sync::Mutex<DeviceManagerData>>, device_discovery_impl: Arc<ThreadsafeDeviceDiscoveryImpl>) -> Result<()> {
+    fn discovery_thread(
+        data: Arc<std::sync::Mutex<DeviceManagerData>>,
+        device_discovery_impl: Arc<ThreadsafeDeviceDiscoveryImpl>,
+    ) -> Result<()> {
         device_discovery_impl
             .discover()
             .context("error sending discovery packet")?;
@@ -203,7 +221,11 @@ impl DeviceManager {
         }
     }
 
-    fn packet_receiver_thread<F>(network_impl: Arc<ThreadsafeNetworkImpl>, port: u16, packet_func: F) -> Result<()>
+    fn packet_receiver_thread<F>(
+        network_impl: Arc<ThreadsafeNetworkImpl>,
+        port: u16,
+        packet_func: F,
+    ) -> Result<()>
     where
         F: Fn(SocketAddr, &protocol::Packet) -> Result<()>,
     {
@@ -229,22 +251,30 @@ impl DeviceManager {
         data: Arc<std::sync::Mutex<DeviceManagerData>>,
         network_impl: Arc<ThreadsafeNetworkImpl>,
     ) -> Result<()> {
-        Self::packet_receiver_thread(network_impl, protocol::NOTIF_RECV_PORT, |from_addr, packet| {
-            let data = Arc::clone(&data);
-            let mut data = data.lock().unwrap();
-            data.handle_notification(from_addr, &packet)
-        })
+        Self::packet_receiver_thread(
+            network_impl,
+            protocol::NOTIF_RECV_PORT,
+            |from_addr, packet| {
+                let data = Arc::clone(&data);
+                let mut data = data.lock().unwrap();
+                data.handle_notification(from_addr, &packet)
+            },
+        )
     }
 
     fn command_reply_thread(
         data: Arc<std::sync::Mutex<DeviceManagerData>>,
         network_impl: Arc<ThreadsafeNetworkImpl>,
     ) -> Result<()> {
-        Self::packet_receiver_thread(network_impl, protocol::CMD_RESP_PORT, |from_addr, packet| {
-            let data = Arc::clone(&data);
-            let mut data = data.lock().unwrap();
-            data.handle_command_response(from_addr, &packet)
-        })
+        Self::packet_receiver_thread(
+            network_impl,
+            protocol::CMD_RESP_PORT,
+            |from_addr, packet| {
+                let data = Arc::clone(&data);
+                let mut data = data.lock().unwrap();
+                data.handle_command_response(from_addr, &packet)
+            },
+        )
     }
 
     pub fn listen(&self) -> std::sync::mpsc::Receiver<DeviceManagerEvent> {
@@ -271,7 +301,7 @@ impl DeviceManager {
     pub fn set_volume(&self, device_id: &DeviceID, volume: u8) -> Result<()> {
         let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
-        data.send_packet(device_id, &commands::Volume::set(volume.clamp(0 , 100)))
+        data.send_packet(device_id, &commands::Volume::set(volume.clamp(0, 100)))
     }
 
     pub fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
@@ -302,10 +332,7 @@ impl DeviceManagerData {
         }
 
         let device = Device::new(info.device_id.clone(), info.ip_address);
-        self.devices.insert(
-            device.id.clone(),
-            device.clone(),
-        );
+        self.devices.insert(device.id.clone(), device.clone());
 
         self.send_event(DeviceManagerEvent::DeviceDiscovered(device));
     }
@@ -447,7 +474,7 @@ impl SSDPDiscovery {
             .bind((ADDR_ANY, SSDP_MULTICAST_PORT))
             .context("error creating socket")?;
 
-        Ok(SSDPDiscovery{sock})
+        Ok(SSDPDiscovery { sock })
     }
 }
 
@@ -465,7 +492,8 @@ impl DeviceDiscoveryImpl for SSDPDiscovery {
 
     fn poll(&self) -> Result<discovery_reply::DiscoveryReply> {
         let mut recv_buffer = vec![0; 4096];
-        let (count, _) = self.sock
+        let (count, _) = self
+            .sock
             .recv_from(&mut recv_buffer)
             .context("error receiving discovery packet")?;
 

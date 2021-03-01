@@ -1,5 +1,5 @@
-use druid::{Data, Widget, WidgetExt};
 use druid::widget::{Flex, Label, MainAxisAlignment, Padding};
+use druid::{Data, Widget, WidgetExt};
 
 pub struct Page;
 
@@ -9,7 +9,8 @@ impl Page {
         content: impl Widget<T> + 'static,
         back_button: Option<Box<dyn Widget<T>>>,
     ) -> impl Widget<T> + 'static
-    where F: Fn(&T) -> String + 'static
+    where
+        F: Fn(&T) -> String + 'static,
     {
         const PADDING: f64 = 10.0;
 

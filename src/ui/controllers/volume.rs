@@ -1,14 +1,21 @@
-use druid::{Env, UpdateCtx, Widget};
 use druid::widget::Controller;
+use druid::{Env, UpdateCtx, Widget};
 
-use super::super::appstate::Device;
-use super::super::commands::SendCommand;
 use crate::commands::{Command, Volume};
+use crate::ui::appstate::Device;
+use crate::ui::commands::SendCommand;
 
 pub struct VolumeController;
 
 impl<W: Widget<Device>> Controller<Device, W> for VolumeController {
-    fn update(&mut self, child: &mut W, ctx: &mut UpdateCtx, old_data: &Device, data: &Device, env: &Env) {
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &Device,
+        data: &Device,
+        env: &Env,
+    ) {
         if old_data.volume != data.volume && data.volume.is_some() {
             let volume = data.volume.unwrap();
             ctx.submit_command(SendCommand::new(

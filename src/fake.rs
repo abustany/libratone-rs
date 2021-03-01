@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::sync::{mpsc, Arc, Mutex};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::sync::{mpsc, Arc, Mutex};
 
 use anyhow::Result;
 
@@ -9,10 +9,13 @@ use crate::commands;
 use crate::commands::Command;
 use crate::device::{DeviceDiscoveryImpl, DeviceManagerConfig, NetworkImpl};
 use crate::discovery_reply::DiscoveryReply;
-use crate::protocol::{CMD_RESP_PORT, NOTIF_RECV_PORT, Packet, PacketReceiver, PacketSender};
+use crate::protocol::{Packet, PacketReceiver, PacketSender, CMD_RESP_PORT, NOTIF_RECV_PORT};
 
 type AddressAndPacket = (SocketAddr, Packet);
-type FakeSocket = (mpsc::Sender<AddressAndPacket>, Arc<Mutex<mpsc::Receiver<AddressAndPacket>>>);
+type FakeSocket = (
+    mpsc::Sender<AddressAndPacket>,
+    Arc<Mutex<mpsc::Receiver<AddressAndPacket>>>,
+);
 
 trait FakeSocketMap {
     fn sender(&mut self, port: u16) -> mpsc::Sender<AddressAndPacket>;
@@ -21,8 +24,7 @@ trait FakeSocketMap {
 
 impl FakeSocketMap for HashMap<u16, FakeSocket> {
     fn sender(&mut self, port: u16) -> mpsc::Sender<AddressAndPacket> {
-        self
-            .entry(port)
+        self.entry(port)
             .or_insert_with(|| {
                 let (tx, rx) = mpsc::channel();
                 (tx, Arc::new(Mutex::new(rx)))
@@ -39,7 +41,7 @@ impl FakeSocketMap for HashMap<u16, FakeSocket> {
                     let (tx, rx) = mpsc::channel();
                     (tx, Arc::new(Mutex::new(rx)))
                 })
-                .1
+                .1,
         )
     }
 }
@@ -58,14 +60,17 @@ impl FakeNetwork {
 
 impl NetworkImpl for FakeNetwork {
     fn packet_sender(&self) -> Result<Box<dyn PacketSender + Send>> {
-        Ok(Box::new(FakePacketSender{
+        Ok(Box::new(FakePacketSender {
             reply_senders: Arc::clone(&self.reply_senders),
             playing: Arc::new(Mutex::new(Cell::new(false))),
         }))
     }
 
     fn packet_receiver(&self, port: u16) -> Result<Box<dyn PacketReceiver + Send>> {
-        Ok(Box::new(FakePacketReceiver{reply_senders: Arc::clone(&self.reply_senders), port}))
+        Ok(Box::new(FakePacketReceiver {
+            reply_senders: Arc::clone(&self.reply_senders),
+            port,
+        }))
     }
 }
 
@@ -78,7 +83,10 @@ impl FakePacketSender {
     fn reply(&self, to_addr: SocketAddr, packet: Packet) {
         let reply_senders = Arc::clone(&self.reply_senders);
         let mut reply_senders = reply_senders.lock().unwrap();
-        reply_senders.sender(to_addr.port()).send((to_addr, packet)).expect("error sending packet");
+        reply_senders
+            .sender(to_addr.port())
+            .send((to_addr, packet))
+            .expect("error sending packet");
     }
 }
 
@@ -98,7 +106,7 @@ impl PacketSender for FakePacketSender {
                             command_data: Some("Pretty name".as_bytes().to_vec()),
                         },
                     )
-                },
+                }
                 commands::Volume::GET_COMMAND_ID => {
                     println!("faking Volume reply");
                     self.reply(
@@ -109,9 +117,9 @@ impl PacketSender for FakePacketSender {
                             command_data: Some("35".as_bytes().to_vec()),
                         },
                     )
-                },
-                _ => {},
-            }
+                }
+                _ => {}
+            },
 
             commands::COMMAND_TYPE_SET => match packet.command {
                 commands::Volume::SET_COMMAND_ID => {
@@ -124,18 +132,25 @@ impl PacketSender for FakePacketSender {
                             command_data: packet.command_data.clone(),
                         },
                     )
-                },
+                }
                 commands::PlayControl::SET_COMMAND_ID => {
                     println!("faking PlayControl notification");
                     let now_playing = {
                         let playing = Arc::clone(&self.playing);
                         let playing = playing.lock().unwrap();
-                        let command_data = String::from_utf8_lossy(packet.command_data.as_ref().unwrap());
+                        let command_data =
+                            String::from_utf8_lossy(packet.command_data.as_ref().unwrap());
 
                         match command_data.as_ref() {
-                            "PLAY" => { playing.set(true); }
-                            "PAUSE" | "STOP" => { playing.set(false); }
-                            "TOGGL" => { playing.set(!playing.get()); }
+                            "PLAY" => {
+                                playing.set(true);
+                            }
+                            "PAUSE" | "STOP" => {
+                                playing.set(false);
+                            }
+                            "TOGGL" => {
+                                playing.set(!playing.get());
+                            }
                             _ => {}
                         };
 
@@ -151,11 +166,11 @@ impl PacketSender for FakePacketSender {
                             command_data: Some(notification_data),
                         },
                     )
-                },
-                _ => {},
-            }
+                }
+                _ => {}
+            },
 
-            _ => {},
+            _ => {}
         }
 
         Ok(packet.data().len())
@@ -190,7 +205,10 @@ struct FakeDeviceDiscovery {
 impl FakeDeviceDiscovery {
     fn new() -> Self {
         let (tx, rx) = mpsc::channel();
-        FakeDeviceDiscovery{sender: tx, receiver: rx}
+        FakeDeviceDiscovery {
+            sender: tx,
+            receiver: rx,
+        }
     }
 }
 
@@ -201,25 +219,30 @@ impl DeviceDiscoveryImpl for FakeDeviceDiscovery {
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_secs(1));
 
-            sender.send(DiscoveryReply{
-                device_name: "Test device".to_owned(),
-                device_id: "test-device".to_owned(),
-                device_state: String::new(),
-                port: FAKE_DEVICE_PORT,
-                zone_id: String::new(),
-                creator: String::new(),
-                ip_address: FAKE_DEVICE_ADDR,
-                color_code: String::new(),
-                firmware_version: String::new(),
-                stereo_pair_id: String::new(),
-            }).expect("error sending discovery packet");
+            sender
+                .send(DiscoveryReply {
+                    device_name: "Test device".to_owned(),
+                    device_id: "test-device".to_owned(),
+                    device_state: String::new(),
+                    port: FAKE_DEVICE_PORT,
+                    zone_id: String::new(),
+                    creator: String::new(),
+                    ip_address: FAKE_DEVICE_ADDR,
+                    color_code: String::new(),
+                    firmware_version: String::new(),
+                    stereo_pair_id: String::new(),
+                })
+                .expect("error sending discovery packet");
         });
 
         Ok(())
     }
 
     fn poll(&self) -> Result<DiscoveryReply> {
-        let packet = self.receiver.recv().expect("error receiving discovery packet");
+        let packet = self
+            .receiver
+            .recv()
+            .expect("error receiving discovery packet");
         Ok(packet)
     }
 }

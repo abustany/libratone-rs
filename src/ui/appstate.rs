@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use druid::{Data, Lens};
 use druid::im::HashMap;
+use druid::{Data, Lens};
 
-use crate::device;
 use crate::commands::{PlayControlCommand, PlayInfoData};
+use crate::device;
 
 #[derive(Clone, Data, Lens, Debug)]
 pub struct Device {
@@ -24,7 +24,7 @@ impl Device {
 
 impl From<device::Device> for Device {
     fn from(d: device::Device) -> Self {
-        Device{
+        Device {
             id: d.id(),
             ip_addr: d.addr().to_string(),
             name: d.name(),
@@ -43,16 +43,22 @@ pub enum Route {
 
 pub trait DeviceMap {
     fn upsert_device(&mut self, d: &Device);
-    fn modify_device<F>(&mut self, device_id: &str, f: F) where F: FnOnce(&mut Device);
+    fn modify_device<F>(&mut self, device_id: &str, f: F)
+    where
+        F: FnOnce(&mut Device);
 }
 
 impl DeviceMap for HashMap<String, Device> {
     fn upsert_device(&mut self, d: &Device) {
-        self.entry(d.id.clone()).and_modify(|x| *x = d.clone()).or_insert(d.clone());
+        self.entry(d.id.clone())
+            .and_modify(|x| *x = d.clone())
+            .or_insert(d.clone());
     }
 
     fn modify_device<F>(&mut self, device_id: &str, f: F)
-        where F: FnOnce(&mut Device) {
+    where
+        F: FnOnce(&mut Device),
+    {
         self.entry(device_id.to_owned()).and_modify(f);
     }
 }
@@ -71,7 +77,7 @@ impl AppState {
     pub fn current_device_id(&self) -> Option<String> {
         match &self.route {
             Route::DeviceDetails(device_id) => Some(device_id.clone()),
-            _ => { None },
+            _ => None,
         }
     }
 }

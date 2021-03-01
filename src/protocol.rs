@@ -89,7 +89,7 @@ pub trait PacketReceiver {
 impl PacketReceiver for UdpSocket {
     fn receive_packet(&self) -> Result<(SocketAddr, Packet)> {
         let mut recv_buffer = vec![0; 65536];
-        let (count, from_addr, ) = self.recv_from(&mut recv_buffer)?;
+        let (count, from_addr) = self.recv_from(&mut recv_buffer)?;
 
         Ok((from_addr, Packet::parse(&recv_buffer[..count])?))
     }
