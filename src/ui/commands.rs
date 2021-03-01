@@ -1,6 +1,7 @@
 use druid::{Command, Selector, Target};
 
 use super::appstate::Device;
+use super::super::protocol::Packet;
 
 pub struct ShowDeviceList;
 
@@ -22,16 +23,25 @@ impl ShowDeviceDetails {
     }
 }
 
-pub struct SetVolume {
+pub struct SendCommand {
     pub device_id: String,
-    pub volume: u8,
+    pub packet: Packet,
+    pub optimistic_update: Box<dyn Fn(&mut Device)>
 }
 
-impl SetVolume {
-    pub const SELECTOR: Selector<SetVolume> = Selector::new("libratone.set-volume");
+impl SendCommand {
+    pub const SELECTOR: Selector<SendCommand> = Selector::new("libratone.set-volume");
 
-    pub fn new(device_id: &str, volume: u8) -> Command {
-        Command::new(Self::SELECTOR, SetVolume{device_id: device_id.to_owned(), volume}, Target::Auto)
+    pub fn new(device_id: &str, packet: Packet, optimistic_update: impl Fn(&mut Device) + 'static) -> Command {
+        Command::new(
+            Self::SELECTOR,
+            SendCommand{
+                device_id: device_id.to_owned(),
+                packet,
+                optimistic_update: Box::new(optimistic_update),
+            },
+            Target::Auto,
+        )
     }
 }
 

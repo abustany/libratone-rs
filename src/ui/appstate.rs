@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use druid::{Data, Lens};
 use druid::im::HashMap;
 
 use crate::device;
+use crate::commands::{PlayControlCommand, PlayInfoData};
 
 #[derive(Clone, Data, Lens, Debug)]
 pub struct Device {
@@ -9,6 +12,8 @@ pub struct Device {
     pub ip_addr: String,
     pub name: Option<String>,
     pub volume: Option<u8>,
+    pub play_status: Option<Arc<PlayControlCommand>>,
+    pub play_info: Option<Arc<PlayInfoData>>,
 }
 
 impl Device {
@@ -24,6 +29,8 @@ impl From<device::Device> for Device {
             ip_addr: d.addr().to_string(),
             name: d.name(),
             volume: d.volume(),
+            play_status: d.play_status().map(|x| Arc::new(x)),
+            play_info: d.play_info().map(|x| Arc::new(x)),
         }
     }
 }

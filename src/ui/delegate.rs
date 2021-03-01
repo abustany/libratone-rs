@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use druid::{AppDelegate, Command, DelegateCtx, Env, Handled, Target};
 
-use super::appstate::{AppState, Device, DeviceMap, Route};
-use super::commands::{DeviceUpdated, SetVolume, ShowDeviceDetails, ShowDeviceList};
+use super::appstate::{AppState, DeviceMap, Route};
+use super::commands::{DeviceUpdated, SendCommand, ShowDeviceDetails, ShowDeviceList};
 use super::super::device::DeviceManager;
 
 pub struct Delegate {
@@ -19,11 +19,13 @@ impl AppDelegate<AppState> for Delegate {
         } else if cmd.is(ShowDeviceList::SELECTOR) {
             data.route = Route::DeviceList;
             Handled::Yes
-        } else if cmd.is(SetVolume::SELECTOR) {
-            let cmd = cmd.get(SetVolume::SELECTOR).unwrap();
-            data.devices.modify_device(&cmd.device_id, |d: &mut Device| d.volume = Some(cmd.volume));
-            if let Err(err) = self.device_manager.set_volume(&cmd.device_id, cmd.volume) {
-                println!("error setting volume for device {}: {}", &cmd.device_id, err);
+        } else if cmd.is(SendCommand::SELECTOR) {
+            let cmd = cmd.get(SendCommand::SELECTOR).unwrap();
+
+            data.devices.modify_device(&cmd.device_id, |d| (&cmd.optimistic_update)(d));
+
+            if let Err(err) = self.device_manager.send_packet(&cmd.device_id, &cmd.packet) {
+                println!("error sending command to device {}: {}", &cmd.device_id, err);
             }
 
             Handled::Yes

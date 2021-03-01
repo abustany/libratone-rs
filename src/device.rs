@@ -7,7 +7,7 @@ use net2;
 use net2::unix::UnixUdpBuilderExt;
 
 use crate::commands;
-use crate::commands::Command;
+use crate::commands::{Command, PlayControlCommand, PlayInfoData};
 use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::{PacketReceiver, PacketSender};
@@ -21,6 +21,8 @@ pub struct Device {
 
     name: Option<String>,
     volume: Option<u8>,
+    play_status: Option<PlayControlCommand>,
+    play_info: Option<PlayInfoData>,
 }
 
 impl Device {
@@ -30,6 +32,8 @@ impl Device {
             addr,
             name: None,
             volume: None,
+            play_status: None,
+            play_info: None,
         }
     }
 
@@ -47,6 +51,14 @@ impl Device {
 
     pub fn volume(&self) -> Option<u8> {
         self.volume
+    }
+
+    pub fn play_status(&self) -> Option<PlayControlCommand> {
+        self.play_status.clone()
+    }
+
+    pub fn play_info(&self) -> Option<PlayInfoData> {
+        self.play_info.clone()
     }
 }
 
@@ -250,6 +262,8 @@ impl DeviceManager {
         let data = data.lock().unwrap();
         data.send_packet(device_id, &commands::DeviceName::fetch())?;
         data.send_packet(device_id, &commands::Volume::fetch())?;
+        data.send_packet(device_id, &commands::PlayControl::fetch())?;
+        data.send_packet(device_id, &commands::PlayInfo::fetch())?;
 
         Ok(())
     }
@@ -258,6 +272,12 @@ impl DeviceManager {
         let data = Arc::clone(&self.data);
         let data = data.lock().unwrap();
         data.send_packet(device_id, &commands::Volume::set(volume.clamp(0 , 100)))
+    }
+
+    pub fn send_packet(&self, device_id: &DeviceID, packet: &protocol::Packet) -> Result<()> {
+        let data = Arc::clone(&self.data);
+        let data = data.lock().unwrap();
+        data.send_packet(device_id, packet)
     }
 }
 
@@ -370,6 +390,18 @@ impl DeviceManagerData {
             }
             commands::Volume::SET_COMMAND_ID => {
                 device.volume = Some(commands::Volume::unmarshal_data(
+                    packet.command_data.as_ref().unwrap_or(&vec![]),
+                )?);
+                Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
+            }
+            commands::PlayControl::NOTIFY_ID => {
+                device.play_status = Some(commands::PlayControl::unmarshal_data(
+                    packet.command_data.as_ref().unwrap_or(&vec![]),
+                )?);
+                Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
+            }
+            commands::PlayInfo::NOTIFY_ID => {
+                device.play_info = Some(commands::PlayInfo::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))

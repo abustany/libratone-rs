@@ -229,23 +229,23 @@ impl Command<PlayControlCommand, PlayControlCommand> for PlayControl {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct PlayInfoData {
     #[serde(rename(deserialize = "isFromChannel"))]
-    is_from_channel: bool,
-    play_album: Option<String>,
-    play_album_uri: Option<String>,
-    play_artist: Option<String>,
-    play_attribution: Option<String>,
-    play_identity: Option<String>,
-    play_object: Option<String>,
-    play_pic: Option<String>,
-    play_preset_available: Option<i32>,
-    play_subtitle: Option<String>,
-    play_title: Option<String>,
-    play_type: Option<String>,
-    play_username: Option<String>,
-    play_token: Option<String>,
+    pub is_from_channel: bool,
+    pub play_album: Option<String>,
+    pub play_album_uri: Option<String>,
+    pub play_artist: Option<String>,
+    pub play_attribution: Option<String>,
+    pub play_identity: Option<String>,
+    pub play_object: Option<String>,
+    pub play_pic: Option<String>,
+    pub play_preset_available: Option<i32>,
+    pub play_subtitle: Option<String>,
+    pub play_title: Option<String>,
+    pub play_type: Option<String>,
+    pub play_username: Option<String>,
+    pub play_token: Option<String>,
 }
 
 pub struct PlayInfo;
