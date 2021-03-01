@@ -5,11 +5,10 @@ use druid::im::HashMap;
 use druid::widget::ViewSwitcher;
 
 use libratone_rs::device;
-use libratone_rs::device::DeviceManager;
+use libratone_rs::device::{DeviceManager, DeviceManagerConfig};
 use libratone_rs::ui::appstate::{AppState, Route};
 use libratone_rs::ui::delegate::Delegate;
 use libratone_rs::ui::commands;
-use libratone_rs::fake::device_manager_config;
 use libratone_rs::ui::pages::device_details::*;
 use libratone_rs::ui::pages::device_list::*;
 
@@ -30,7 +29,7 @@ fn main() -> Result<(), PlatformError> {
         devices: HashMap::new(),
     };
 
-    let device_manager = Arc::new(DeviceManager::new(device_manager_config()?)?);
+    let device_manager = Arc::new(DeviceManager::new(DeviceManagerConfig::default()?)?);
     let device_manager_events = device_manager.listen();
 
     let window = WindowDesc::new(build_ui)
