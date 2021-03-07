@@ -91,7 +91,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
         .with_flex_spacer(1.0);
 
     let now_playing = Either::new(
-        |d: &Device, _env: &_| d.play_info.is_some(),
+        |d: &Device, _env: &_| d.play_info.as_ref().and_then(|x| x.play_title.as_ref()).map(|x| x.len()).unwrap_or(0) > 0,
         Flex::column()
             .with_flex_child(Label::new("Now playing:"), 0.0)
             .with_flex_child(
