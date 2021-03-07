@@ -309,6 +309,38 @@ impl Command<(), String> for PowerMode {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ChargingStateData {
+    Discharging,
+    PluggedInCharging,
+    PluggedInCharged,
+    PluggedInNotCharging,
+}
+
+pub struct ChargingState;
+
+impl Command<(), ChargingStateData> for ChargingState {
+    const SET_COMMAND_ID: u16 = 0;
+    const GET_COMMAND_ID: u16 = 1284;
+    const NOTIFY_ID: u16 = 1284;
+    const NAME: &'static str = "Charging state";
+
+    fn marshal_data(_: ()) -> Vec<u8> {
+        vec![] // for now
+    }
+
+    fn unmarshal_data(data: &[u8]) -> Result<ChargingStateData> {
+        match *data {
+            [48] => Ok(ChargingStateData::Discharging),
+            [49] => Ok(ChargingStateData::PluggedInCharging),
+            [50] => Ok(ChargingStateData::PluggedInCharged),
+            [51] => Ok(ChargingStateData::PluggedInNotCharging),
+            [other] => Err(anyhow!("invalid data: {}", other)),
+            _ => Err(anyhow!("invalid data length")),
+        }
+    }
+}
+
 pub struct FirmwareUpdate;
 
 impl Command<(), String> for FirmwareUpdate {

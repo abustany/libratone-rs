@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use net2::unix::UnixUdpBuilderExt;
 
 use crate::commands;
-use crate::commands::{Command, PlayControlCommand, PlayInfoData};
+use crate::commands::{ChargingStateData, Command, PlayControlCommand, PlayInfoData};
 use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::{PacketReceiver, PacketSender};
@@ -20,6 +20,7 @@ pub struct Device {
     volume: Option<u8>,
     play_status: Option<PlayControlCommand>,
     play_info: Option<PlayInfoData>,
+    charging_state: Option<ChargingStateData>,
 }
 
 impl Device {
@@ -31,6 +32,7 @@ impl Device {
             volume: None,
             play_status: None,
             play_info: None,
+            charging_state: None,
         }
     }
 
@@ -291,6 +293,7 @@ impl DeviceManager {
         data.send_packet(device_id, &commands::Volume::fetch())?;
         data.send_packet(device_id, &commands::PlayControl::fetch())?;
         data.send_packet(device_id, &commands::PlayInfo::fetch())?;
+        data.send_packet(device_id, &commands::ChargingState::fetch())?;
 
         Ok(())
     }
@@ -426,6 +429,12 @@ impl DeviceManagerData {
             }
             commands::PlayInfo::NOTIFY_ID => {
                 device.play_info = Some(commands::PlayInfo::unmarshal_data(
+                    packet.command_data.as_ref().unwrap_or(&vec![]),
+                )?);
+                Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
+            }
+            commands::ChargingState::NOTIFY_ID => {
+                device.charging_state = Some(commands::ChargingState::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
