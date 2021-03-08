@@ -15,6 +15,7 @@ pub enum CommandType {
 
 pub trait Command<RequestDataType, ResponseDataType: std::fmt::Debug> {
     const GET_COMMAND_ID: u16;
+    const GET_REPLY_COMMAND_ID: u16 = Self::GET_COMMAND_ID;
     const SET_COMMAND_ID: u16;
     const NOTIFY_ID: u16;
     const NAME: &'static str;
@@ -52,7 +53,7 @@ pub trait Command<RequestDataType, ResponseDataType: std::fmt::Debug> {
     }
 
     fn format_reply(p: &protocol::Packet) -> String {
-        assert_eq!(Self::GET_COMMAND_ID, p.command);
+        assert_eq!(Self::GET_REPLY_COMMAND_ID, p.command);
         Self::format(p)
     }
 
