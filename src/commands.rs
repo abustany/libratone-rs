@@ -77,6 +77,7 @@ pub trait Command<RequestDataType, ResponseDataType: std::fmt::Debug> {
 
 pub fn format_reply(p: &protocol::Packet) -> String {
     match p.command {
+        BatteryLevel::GET_REPLY_COMMAND_ID => BatteryLevel::format_reply(p),
         Capabilities::GET_COMMAND_ID => Capabilities::format_reply(p),
         DeviceName::GET_COMMAND_ID => DeviceName::format_reply(p),
         FirmwareUpdate::GET_COMMAND_ID => FirmwareUpdate::format_reply(p),
@@ -88,6 +89,7 @@ pub fn format_reply(p: &protocol::Packet) -> String {
 
 pub fn format_notification(p: &protocol::Packet) -> String {
     match p.command {
+        BatteryLevel::NOTIFY_ID => BatteryLevel::format_notification(p),
         FirmwareUpdate::NOTIFY_ID => FirmwareUpdate::format_notification(p),
         PlayControl::NOTIFY_ID => PlayControl::format_notification(p),
         PlayInfo::NOTIFY_ID => PlayInfo::format_notification(p),
@@ -339,6 +341,26 @@ impl Command<(), ChargingStateData> for ChargingState {
             [other] => Err(anyhow!("invalid data: {}", other)),
             _ => Err(anyhow!("invalid data length")),
         }
+    }
+}
+
+pub struct BatteryLevel;
+
+impl Command<(), u8> for BatteryLevel {
+    const SET_COMMAND_ID: u16 = 0;
+    const GET_COMMAND_ID: u16 = 256;
+    const GET_REPLY_COMMAND_ID: u16 = 257;
+    const NOTIFY_ID: u16 = 258;
+    const NAME: &'static str = "Battery level";
+
+    fn marshal_data(_: ()) -> Vec<u8> {
+        vec![] // for now
+    }
+
+    fn unmarshal_data(data: &[u8]) -> Result<u8> {
+        String::from_utf8_lossy(data)
+            .parse()
+            .map_err(|x| anyhow!("error parsing battery level: {}", x))
     }
 }
 
