@@ -234,7 +234,7 @@ impl Command<PlayControlCommand, PlayControlCommand> for PlayControl {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PlayInfoData {
     #[serde(rename(deserialize = "isFromChannel"))]
     pub is_from_channel: bool,
@@ -255,14 +255,20 @@ pub struct PlayInfoData {
 
 pub struct PlayInfo;
 
-impl Command<(), PlayInfoData> for PlayInfo {
+impl Command<PlayInfoData, PlayInfoData> for PlayInfo {
     const SET_COMMAND_ID: u16 = 277;
     const GET_COMMAND_ID: u16 = 278;
     const NOTIFY_ID: u16 = 278;
     const NAME: &'static str = "Play info";
 
-    fn marshal_data(_: ()) -> Vec<u8> {
-        vec![] // for now
+    fn marshal_data(d: PlayInfoData) -> Vec<u8> {
+        match serde_json::to_vec(&d) {
+            Ok(data) => data,
+            Err(err) => {
+                println!("error marshaling PlayInfoData to JSON: {}", err);
+                vec![]
+            }
+        }
     }
 
     fn unmarshal_data(data: &[u8]) -> Result<PlayInfoData> {
@@ -392,6 +398,25 @@ pub struct ChannelObject {
     pub username: Option<String>,
     pub password: Option<String>,
     pub play_token: Option<String>,
+}
+
+impl ChannelObject {
+    pub fn play_info_data(&self) -> PlayInfoData {
+        // This is an ugly hack to "untype" the enum to a string
+        let play_type = serde_json::to_string(&self.channel_type)
+            .unwrap()
+            .trim_matches('"')
+            .to_owned();
+
+        PlayInfoData{
+            play_title: Some(self.channel_name.clone()),
+            play_subtitle: Some(self.channel_name.clone()),
+            play_type: Some(play_type),
+            play_identity: self.channel_identity.clone(),
+            play_token: self.play_token.clone(),
+            ..PlayInfoData::default()
+        }
+    }
 }
 
 pub struct FirmwareUpdate;
