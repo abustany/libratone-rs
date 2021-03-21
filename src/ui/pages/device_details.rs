@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use druid::im::Vector;
-use druid::widget::{Button, Either, Flex, Label, LabelText, List, Scroll, SizedBox, Slider};
+use druid::widget::{Button, Either, Flex, Label, LabelText, LineBreaking, List, Scroll, SizedBox, Slider};
 use druid::{lens, EventCtx, Lens, LensExt, Widget, WidgetExt};
 
 use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
@@ -139,7 +139,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .as_ref()
                         .map(|x| x.to_owned())
                         .unwrap_or_default()
-                }),
+                }).with_line_break_mode(LineBreaking::WordWrap),
                 0.0,
             )
             .with_flex_child(
@@ -148,7 +148,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .as_ref()
                         .map(|x| x.to_owned())
                         .unwrap_or_default()
-                }),
+                }).with_line_break_mode(LineBreaking::WordWrap),
                 0.0,
             )
             .with_default_spacer()
