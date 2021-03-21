@@ -63,6 +63,10 @@ impl Device {
     pub fn play_info(&self) -> Option<PlayInfoData> {
         self.play_info.clone()
     }
+
+    pub fn pre_channels(&self) -> Option<Vec<ChannelObject>> {
+        self.pre_channels.clone()
+    }
 }
 
 #[derive(Clone, Debug)]

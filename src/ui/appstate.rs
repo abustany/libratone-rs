@@ -1,10 +1,16 @@
 use std::sync::Arc;
 
-use druid::im::HashMap;
+use druid::im::{HashMap, Vector};
 use druid::{Data, Lens};
 
-use crate::commands::{PlayControlCommand, PlayInfoData};
+use crate::commands::{ChannelObject, PlayControlCommand, PlayInfoData};
 use crate::device;
+
+#[derive(Clone, Data, Lens, Debug)]
+pub struct PreChannel {
+    pub name: String,
+    pub channel: Arc<ChannelObject>,
+}
 
 #[derive(Clone, Data, Lens, Debug)]
 pub struct Device {
@@ -14,6 +20,7 @@ pub struct Device {
     pub volume: Option<u8>,
     pub play_status: Option<Arc<PlayControlCommand>>,
     pub play_info: Option<Arc<PlayInfoData>>,
+    pub pre_channels: Vector<PreChannel>,
 }
 
 impl Device {
@@ -31,6 +38,12 @@ impl From<device::Device> for Device {
             volume: d.volume(),
             play_status: d.play_status().map(Arc::new),
             play_info: d.play_info().map(Arc::new),
+            pre_channels: d.pre_channels().unwrap_or_default().into_iter().map(|c| {
+                PreChannel{
+                    name: c.channel_name.clone(),
+                    channel: Arc::new(c),
+                }
+            }).collect(),
         }
     }
 }

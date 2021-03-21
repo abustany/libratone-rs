@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use druid::widget::{Button, Either, Flex, Label, LabelText, SizedBox, Slider};
-use druid::{EventCtx, Lens, LensExt, Widget, WidgetExt};
+use druid::{EventCtx, Lens, lens, LensExt, Widget, WidgetExt};
+use druid::im::Vector;
+use druid::widget::{Button, Either, Flex, Label, LabelText, List, Scroll, SizedBox, Slider};
 
-use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfoData};
-use crate::ui::appstate::{AppState, Device, DeviceMap};
+use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
+use crate::ui::appstate::{AppState, Device, DeviceMap, PreChannel};
 use crate::ui::commands::{SendCommand, ShowDeviceList};
 use crate::ui::controllers::VolumeController;
 use crate::ui::widgets;
@@ -42,6 +43,21 @@ fn control_button(
     })
 }
 
+fn favorite_item() -> impl Widget<(Device, PreChannel)> {
+    Flex::row()
+        .with_flex_child(
+            Button::new(|(_, ch): &(Device, PreChannel), _env: &_| ch.name.clone())
+                .on_click(|ctx, (device, ch), _env| {
+                    ctx.submit_command(SendCommand::command(
+                        &device.id,
+                        PlayInfo::set(ch.channel.play_info_data()),
+                        |_| {},
+                    ))
+                }),
+            1.0,
+        )
+}
+
 pub fn build_device_details() -> impl Widget<AppState> {
     let back_button = Button::new("←")
         .on_click(|ctx, _app_state, _env| ctx.submit_command(ShowDeviceList::command()));
@@ -60,6 +76,24 @@ pub fn build_device_details() -> impl Widget<AppState> {
                     }
                 },
             ));
+
+    let pre_channels = Either::new(
+        |d: &Device, _env: &_| !d.pre_channels.is_empty(),
+        Flex::column()
+            .with_flex_child(Label::new("Favorites:").expand_width(), 0.0)
+            .with_flex_child(
+                Scroll::new(
+                    List::new(favorite_item)
+                        .lens(lens::Identity.map(
+                            |d: &Device| (d.clone(), d.pre_channels.clone()),
+                            |_d: &mut Device, _x: (Device, Vector<PreChannel>)| {},
+                        ))
+                ).vertical(),
+                1.0,
+            )
+            .expand_width(),
+        SizedBox::empty(),
+    );
 
     let controls = Flex::row()
         .with_flex_spacer(1.0)
@@ -126,7 +160,9 @@ pub fn build_device_details() -> impl Widget<AppState> {
                 .controller(VolumeController),
             0.0,
         )
-        .with_flex_spacer(1.0)
+        .with_default_spacer()
+        .with_flex_child(Flex::row().with_flex_child(pre_channels, 1.0), 1.0)
+        .with_default_spacer()
         .with_flex_child(Flex::row().with_flex_child(now_playing, 1.0), 0.0)
         .with_flex_child(controls, 0.0);
 
