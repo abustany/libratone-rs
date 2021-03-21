@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use net2::unix::UnixUdpBuilderExt;
 
 use crate::commands;
-use crate::commands::{ChargingStateData, Command, PlayControlCommand, PlayInfoData};
+use crate::commands::{ChannelObject, ChargingStateData, Command, PlayControlCommand, PlayInfoData};
 use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::{PacketReceiver, PacketSender};
@@ -20,7 +20,9 @@ pub struct Device {
     volume: Option<u8>,
     play_status: Option<PlayControlCommand>,
     play_info: Option<PlayInfoData>,
+    pre_channels: Option<Vec<ChannelObject>>,
     charging_state: Option<ChargingStateData>,
+    battery_level: Option<u8>,
 }
 
 impl Device {
@@ -32,7 +34,9 @@ impl Device {
             volume: None,
             play_status: None,
             play_info: None,
+            pre_channels: None,
             charging_state: None,
+            battery_level: None,
         }
     }
 
@@ -437,6 +441,18 @@ impl DeviceManagerData {
             }
             commands::ChargingState::GET_REPLY_COMMAND_ID => {
                 device.charging_state = Some(commands::ChargingState::unmarshal_data(
+                    packet.command_data.as_ref().unwrap_or(&vec![]),
+                )?);
+                Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
+            }
+            commands::BatteryLevel::GET_REPLY_COMMAND_ID | commands::BatteryLevel::NOTIFY_ID => {
+                device.battery_level = Some(commands::BatteryLevel::unmarshal_data(
+                    packet.command_data.as_ref().unwrap_or(&vec![]),
+                )?);
+                Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
+            }
+            commands::PreChannel::GET_COMMAND_ID => {
+                device.pre_channels = Some(commands::PreChannel::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
