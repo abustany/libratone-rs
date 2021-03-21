@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
 use anyhow::{anyhow, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::protocol;
 
@@ -82,7 +82,9 @@ pub fn format_reply(p: &protocol::Packet) -> String {
         DeviceName::GET_COMMAND_ID => DeviceName::format_reply(p),
         FirmwareUpdate::GET_COMMAND_ID => FirmwareUpdate::format_reply(p),
         PlayControl::GET_COMMAND_ID => PlayControl::format_reply(p),
-        Volume::GET_COMMAND_ID => Volume::format_notification(p),
+        PlayInfo::GET_COMMAND_ID => PlayInfo::format_reply(p),
+        PreChannel::GET_COMMAND_ID => PreChannel::format_reply(p),
+        Volume::GET_COMMAND_ID => Volume::format_reply(p),
         _ => format!("{:?}", p),
     }
 }
@@ -364,6 +366,34 @@ impl Command<(), u8> for BatteryLevel {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChannelType {
+    VTuner,
+    XMLY,
+    DoubanFM,
+    Spotify,
+    Kaishu,
+    Deezer,
+    Tidal,
+    Napster,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ChannelObject {
+    #[serde(rename(deserialize = "isPlaying"))]
+    pub is_playing: Option<bool>,
+    pub channel_id: i64,
+    pub channel_type: ChannelType,
+    pub channel_name: String,
+    pub channel_identity: Option<String>,
+    pub station_url: Option<String>,
+    pub picture_url: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub play_token: Option<String>,
+}
+
 pub struct FirmwareUpdate;
 
 impl Command<(), String> for FirmwareUpdate {
@@ -378,5 +408,28 @@ impl Command<(), String> for FirmwareUpdate {
 
     fn unmarshal_data(data: &[u8]) -> Result<String> {
         Ok(String::from_utf8_lossy(data).to_string())
+    }
+}
+
+pub struct PreChannel;
+
+impl Command<ChannelObject, Vec<ChannelObject>> for PreChannel {
+    const SET_COMMAND_ID: u16 = 276;
+    const GET_COMMAND_ID: u16 = 275;
+    const NOTIFY_ID: u16 = 0;
+    const NAME: &'static str = "PreChannel";
+
+    fn marshal_data(ch: ChannelObject) -> Vec<u8> {
+        match serde_json::to_vec(&ch) {
+            Ok(data) => data,
+            Err(err) => {
+                println!("error marshaling channel to JSON: {}", err);
+                vec![]
+            }
+        }
+    }
+
+    fn unmarshal_data(data: &[u8]) -> Result<Vec<ChannelObject>> {
+        serde_json::from_slice(data).context("error parsing JSON")
     }
 }

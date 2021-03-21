@@ -295,6 +295,7 @@ impl DeviceManager {
         data.send_packet(device_id, &commands::PlayInfo::fetch())?;
         data.send_packet(device_id, &commands::ChargingState::fetch())?;
         data.send_packet(device_id, &commands::BatteryLevel::fetch())?;
+        data.send_packet(device_id, &commands::PreChannel::fetch())?;
 
         Ok(())
     }
