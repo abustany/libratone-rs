@@ -411,31 +411,31 @@ impl DeviceManagerData {
         packet: &protocol::Packet,
     ) -> Result<Option<DeviceManagerEvent>> {
         match packet.command {
-            commands::DeviceName::SET_COMMAND_ID => {
+            commands::DeviceName::GET_REPLY_COMMAND_ID => {
                 device.name = Some(commands::DeviceName::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
             }
-            commands::Volume::SET_COMMAND_ID => {
+            commands::Volume::GET_REPLY_COMMAND_ID => {
                 device.volume = Some(commands::Volume::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
             }
-            commands::PlayControl::NOTIFY_ID => {
+            commands::PlayControl::GET_REPLY_COMMAND_ID => {
                 device.play_status = Some(commands::PlayControl::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
             }
-            commands::PlayInfo::NOTIFY_ID => {
+            commands::PlayInfo::GET_REPLY_COMMAND_ID => {
                 device.play_info = Some(commands::PlayInfo::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
                 Ok(Some(DeviceManagerEvent::DeviceUpdated(device.clone())))
             }
-            commands::ChargingState::NOTIFY_ID => {
+            commands::ChargingState::GET_REPLY_COMMAND_ID => {
                 device.charging_state = Some(commands::ChargingState::unmarshal_data(
                     packet.command_data.as_ref().unwrap_or(&vec![]),
                 )?);
