@@ -8,10 +8,11 @@ use crate::ui::widgets;
 
 fn device_item() -> impl Widget<Device> {
     let device_name =
-        Label::new(|d: &Device, _env: &_| d.name.as_ref().unwrap_or(&d.id).to_owned())
-            .on_click(|ctx, device, _env| {
+        Label::new(|d: &Device, _env: &_| d.name.as_ref().unwrap_or(&d.id).to_owned()).on_click(
+            |ctx, device, _env| {
                 ctx.submit_command(ShowDeviceDetails::command(&device.id));
-            });
+            },
+        );
     Flex::row().with_flex_child(device_name, 1.0)
 }
 

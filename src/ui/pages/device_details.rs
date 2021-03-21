@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use druid::{EventCtx, Lens, lens, LensExt, Widget, WidgetExt};
 use druid::im::Vector;
 use druid::widget::{Button, Either, Flex, Label, LabelText, List, Scroll, SizedBox, Slider};
+use druid::{lens, EventCtx, Lens, LensExt, Widget, WidgetExt};
 
 use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
 use crate::ui::appstate::{AppState, Device, DeviceMap, PreChannel};
@@ -44,18 +44,18 @@ fn control_button(
 }
 
 fn favorite_item() -> impl Widget<(Device, PreChannel)> {
-    Flex::row()
-        .with_flex_child(
-            Button::new(|(_, ch): &(Device, PreChannel), _env: &_| ch.name.clone())
-                .on_click(|ctx, (device, ch), _env| {
-                    ctx.submit_command(SendCommand::command(
-                        &device.id,
-                        PlayInfo::set(ch.channel.play_info_data()),
-                        |_| {},
-                    ))
-                }),
-            1.0,
-        )
+    Flex::row().with_flex_child(
+        Button::new(|(_, ch): &(Device, PreChannel), _env: &_| ch.name.clone()).on_click(
+            |ctx, (device, ch), _env| {
+                ctx.submit_command(SendCommand::command(
+                    &device.id,
+                    PlayInfo::set(ch.channel.play_info_data()),
+                    |_| {},
+                ))
+            },
+        ),
+        1.0,
+    )
 }
 
 pub fn build_device_details() -> impl Widget<AppState> {
@@ -82,13 +82,11 @@ pub fn build_device_details() -> impl Widget<AppState> {
         Flex::column()
             .with_flex_child(Label::new("Favorites:").expand_width(), 0.0)
             .with_flex_child(
-                Scroll::new(
-                    List::new(favorite_item)
-                        .lens(lens::Identity.map(
-                            |d: &Device| (d.clone(), d.pre_channels.clone()),
-                            |_d: &mut Device, _x: (Device, Vector<PreChannel>)| {},
-                        ))
-                ).vertical(),
+                Scroll::new(List::new(favorite_item).lens(lens::Identity.map(
+                    |d: &Device| (d.clone(), d.pre_channels.clone()),
+                    |_d: &mut Device, _x: (Device, Vector<PreChannel>)| {},
+                )))
+                .vertical(),
                 1.0,
             )
             .expand_width(),
@@ -125,7 +123,14 @@ pub fn build_device_details() -> impl Widget<AppState> {
         .with_flex_spacer(1.0);
 
     let now_playing = Either::new(
-        |d: &Device, _env: &_| d.play_info.as_ref().and_then(|x| x.play_title.as_ref()).map(|x| x.len()).unwrap_or(0) > 0,
+        |d: &Device, _env: &_| {
+            d.play_info
+                .as_ref()
+                .and_then(|x| x.play_title.as_ref())
+                .map(|x| x.len())
+                .unwrap_or(0)
+                > 0
+        },
         Flex::column()
             .with_flex_child(Label::new("Now playing:"), 0.0)
             .with_flex_child(

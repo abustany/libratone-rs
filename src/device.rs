@@ -6,7 +6,9 @@ use anyhow::{anyhow, Context, Result};
 use net2::unix::UnixUdpBuilderExt;
 
 use crate::commands;
-use crate::commands::{ChannelObject, ChargingStateData, Command, PlayControlCommand, PlayInfoData};
+use crate::commands::{
+    ChannelObject, ChargingStateData, Command, PlayControlCommand, PlayInfoData,
+};
 use crate::discovery_reply;
 use crate::protocol;
 use crate::protocol::{PacketReceiver, PacketSender};

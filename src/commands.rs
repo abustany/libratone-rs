@@ -408,7 +408,7 @@ impl ChannelObject {
             .trim_matches('"')
             .to_owned();
 
-        PlayInfoData{
+        PlayInfoData {
             play_title: Some(self.channel_name.clone()),
             play_subtitle: Some(self.channel_name.clone()),
             play_type: Some(play_type),

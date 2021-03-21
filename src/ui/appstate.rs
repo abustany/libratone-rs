@@ -38,12 +38,15 @@ impl From<device::Device> for Device {
             volume: d.volume(),
             play_status: d.play_status().map(Arc::new),
             play_info: d.play_info().map(Arc::new),
-            pre_channels: d.pre_channels().unwrap_or_default().into_iter().map(|c| {
-                PreChannel{
+            pre_channels: d
+                .pre_channels()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|c| PreChannel {
                     name: c.channel_name.clone(),
                     channel: Arc::new(c),
-                }
-            }).collect(),
+                })
+                .collect(),
         }
     }
 }
