@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use druid::{AppDelegate, Command, DelegateCtx, Env, Handled, Target};
 
-use crate::device::DeviceManager;
-use crate::ui::appstate::{AppState, DeviceMap, Route};
-use crate::ui::commands::{DeviceUpdated, SendCommand, ShowDeviceDetails, ShowDeviceList};
+use libratone_rs::device::DeviceManager;
+use super::appstate::{AppState, DeviceMap, Route};
+use super::commands::{DeviceUpdated, SendCommand, ShowDeviceDetails, ShowDeviceList};
 
 pub struct Delegate {
     pub device_manager: Arc<DeviceManager>,

@@ -2,9 +2,9 @@ use druid::im::Vector;
 use druid::widget::{Flex, Label, List, Scroll, WidgetExt};
 use druid::{LensExt, Widget};
 
-use crate::ui::appstate::{AppState, Device};
-use crate::ui::commands::ShowDeviceDetails;
-use crate::ui::widgets;
+use crate::appstate::{AppState, Device};
+use crate::commands::ShowDeviceDetails;
+use crate::widgets;
 
 fn device_item() -> impl Widget<Device> {
     let device_name =

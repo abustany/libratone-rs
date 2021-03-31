@@ -1,9 +1,9 @@
 use druid::widget::Controller;
 use druid::{Env, UpdateCtx, Widget};
 
-use crate::commands::{Command, Volume};
-use crate::ui::appstate::Device;
-use crate::ui::commands::SendCommand;
+use libratone_rs::commands::{Command, Volume};
+use crate::appstate::Device;
+use crate::commands::SendCommand;
 
 pub struct VolumeController;
 

@@ -6,11 +6,11 @@ use druid::{AppLauncher, PlatformError, Target, Widget, WindowDesc};
 
 use libratone_rs::device;
 use libratone_rs::device::{DeviceManager, DeviceManagerConfig};
-use libratone_rs::ui::appstate::{AppState, Route};
-use libratone_rs::ui::commands;
-use libratone_rs::ui::delegate::Delegate;
-use libratone_rs::ui::pages::device_details::*;
-use libratone_rs::ui::pages::device_list::*;
+use libratone_rs_ui::appstate::{AppState, Route};
+use libratone_rs_ui::commands;
+use libratone_rs_ui::delegate::Delegate;
+use libratone_rs_ui::pages::device_details::*;
+use libratone_rs_ui::pages::device_list::*;
 
 fn build_ui() -> impl Widget<AppState> {
     ViewSwitcher::new(

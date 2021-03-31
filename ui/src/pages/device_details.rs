@@ -4,11 +4,11 @@ use druid::im::Vector;
 use druid::widget::{Button, Either, Flex, Label, LabelText, LineBreaking, List, Scroll, SizedBox, Slider};
 use druid::{lens, EventCtx, Lens, LensExt, Widget, WidgetExt};
 
-use crate::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
-use crate::ui::appstate::{AppState, Device, DeviceMap, PreChannel};
-use crate::ui::commands::{SendCommand, ShowDeviceList};
-use crate::ui::controllers::VolumeController;
-use crate::ui::widgets;
+use libratone_rs::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
+use crate::appstate::{AppState, Device, DeviceMap, PreChannel};
+use crate::commands::{SendCommand, ShowDeviceList};
+use crate::controllers::VolumeController;
+use crate::widgets;
 
 pub struct CurrentDeviceLens;
 

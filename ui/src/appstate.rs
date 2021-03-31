@@ -3,8 +3,8 @@ use std::sync::Arc;
 use druid::im::{HashMap, Vector};
 use druid::{Data, Lens};
 
-use crate::commands::{ChannelObject, PlayControlCommand, PlayInfoData};
-use crate::device;
+use libratone_rs::commands::{ChannelObject, PlayControlCommand, PlayInfoData};
+use libratone_rs::device;
 
 #[derive(Clone, Data, Lens, Debug)]
 pub struct PreChannel {

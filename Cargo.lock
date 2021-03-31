@@ -811,6 +811,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libratone-rs-ui"
+version = "0.1.0"
+dependencies = [
+ "druid",
+ "libratone-rs",
+]
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
