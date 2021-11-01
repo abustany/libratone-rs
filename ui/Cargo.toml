@@ -2,7 +2,7 @@
 name = "libratone-rs-ui"
 version = "0.1.0"
 authors = ["Adrien Bustany <adrien@bustany.org>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "libratone_rs_ui"
