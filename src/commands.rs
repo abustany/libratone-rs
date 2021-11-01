@@ -65,7 +65,7 @@ pub trait Command<RequestDataType, ResponseDataType: std::fmt::Debug> {
         };
 
         let unmarshal_result = match &p.command_data {
-            Some(data) => Self::unmarshal_data(&data)
+            Some(data) => Self::unmarshal_data(data)
                 .map(|x| format!("{:?}", x))
                 .unwrap_or_else(|err| format!("{:?}", err)),
             None => "".to_string(),

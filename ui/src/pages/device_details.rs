@@ -16,7 +16,7 @@ impl Lens<AppState, Device> for CurrentDeviceLens {
     fn with<V, F: FnOnce(&Device) -> V>(&self, data: &AppState, f: F) -> V {
         let current_device_id = data.current_device_id().unwrap();
         let current_device = data.devices.get(&current_device_id).unwrap();
-        f(&current_device)
+        f(current_device)
     }
 
     fn with_mut<V, F: FnOnce(&mut Device) -> V>(&self, data: &mut AppState, f: F) -> V {

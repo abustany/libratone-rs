@@ -73,7 +73,7 @@ impl DiscoveryReply {
                 }
                 "PORT" => {
                     port = Some(
-                        u16::from_str_radix(String::from_utf8_lossy(header.value).as_ref(), 10)
+                        String::from_utf8_lossy(header.value).as_ref().parse::<u16>()
                             .context("invalid port number")?,
                     );
                 }

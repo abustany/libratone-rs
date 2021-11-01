@@ -266,7 +266,7 @@ impl DeviceManager {
             |from_addr, packet| {
                 let data = Arc::clone(&data);
                 let mut data = data.lock().unwrap();
-                data.handle_notification(from_addr, &packet)
+                data.handle_notification(from_addr, packet)
             },
         )
     }
@@ -281,7 +281,7 @@ impl DeviceManager {
             |from_addr, packet| {
                 let data = Arc::clone(&data);
                 let mut data = data.lock().unwrap();
-                data.handle_command_response(from_addr, &packet)
+                data.handle_command_response(from_addr, packet)
             },
         )
     }
