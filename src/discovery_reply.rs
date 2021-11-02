@@ -116,7 +116,7 @@ impl DiscoveryReply {
             color_code: color_code.ok_or_else(|| anyhow!("missing ColorCode header"))?,
             firmware_version: firmware_version
                 .ok_or_else(|| anyhow!("missing FWVersion header"))?,
-            stereo_pair_id: stereo_pair_id.ok_or_else(|| anyhow!("missing StereoPairID header"))?,
+            stereo_pair_id: stereo_pair_id.unwrap_or_default(),
         })
     }
 }
