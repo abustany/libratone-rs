@@ -1,0 +1,29 @@
+name: "Test"
+on:
+  pull_request:
+  push:
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+      - name: Set up Rust cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-cache-${{ hashFiles('**/Cargo.lock') }}
+      - name: Check formatting
+        run: nix develop --command cargo fmt --check --all
+      - name: Run tests
+        run: nix develop --command cargo test --all
+      - name: Build
+        run: nix develop --command cargo build --all
