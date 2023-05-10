@@ -9,8 +9,17 @@ jobs:
     steps:
       - name: git checkout
         uses: actions/checkout@v3
+      - name: Cache Nix store
+        uses: actions/cache@v3
+        id: nix-cache
+        with:
+          path: /tmp/nixcache
+          key: "nix-store-cache-${{ hashFiles('**/flake.lock') }}"
       - name: Install Nix
         uses: cachix/install-nix-action@v20
+      - name: Import Nix store cache
+        if: "steps.nix-cache.outputs.cache-hit == 'true'"
+        run: "nix copy --no-check-sigs --from /tmp/nixcache ./#devShells.x86_64-linux.default"
       - name: Set up Rust cache
         uses: actions/cache@v3
         with:
@@ -21,9 +30,19 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-cache-${{ hashFiles('**/Cargo.lock') }}
+      - name: Enable Cargo sparse protocol
+        run: |-
+          mkdir -p ~/.cargo
+          cat >>~/.cargo/config <<EOF
+          [registries.crates-io]
+          protocol = "sparse"
+          EOF
       - name: Check formatting
         run: nix develop --command cargo fmt --check --all
       - name: Run tests
         run: nix develop --command cargo test --all
       - name: Build
         run: nix develop --command cargo build --all
+      - name: Export Nix store cache
+        if: "steps.nix-cache.outputs.cache-hit != 'true'"
+        run: "nix copy --no-check-sigs --to /tmp/nixcache ./#devShells.x86_64-linux.default"
