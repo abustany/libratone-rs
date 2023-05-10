@@ -1,7 +1,7 @@
 use druid::{Command, Selector, Target};
 
-use libratone_rs::protocol::Packet;
 use crate::appstate::Device;
+use libratone_rs::protocol::Packet;
 
 pub struct ShowDeviceList;
 

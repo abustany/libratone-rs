@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
 use druid::im::Vector;
-use druid::widget::{Button, Either, Flex, Label, LabelText, LineBreaking, List, Scroll, SizedBox, Slider};
+use druid::widget::{
+    Button, Either, Flex, Label, LabelText, LineBreaking, List, Scroll, SizedBox, Slider,
+};
 use druid::{lens, EventCtx, Lens, LensExt, Widget, WidgetExt};
 
-use libratone_rs::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
 use crate::appstate::{AppState, Device, DeviceMap, PreChannel};
 use crate::commands::{SendCommand, ShowDeviceList};
 use crate::controllers::VolumeController;
 use crate::widgets;
+use libratone_rs::commands::{Command, PlayControl, PlayControlCommand, PlayInfo, PlayInfoData};
 
 pub struct CurrentDeviceLens;
 
@@ -139,7 +141,8 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .as_ref()
                         .map(|x| x.to_owned())
                         .unwrap_or_default()
-                }).with_line_break_mode(LineBreaking::WordWrap),
+                })
+                .with_line_break_mode(LineBreaking::WordWrap),
                 0.0,
             )
             .with_flex_child(
@@ -148,7 +151,8 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .as_ref()
                         .map(|x| x.to_owned())
                         .unwrap_or_default()
-                }).with_line_break_mode(LineBreaking::WordWrap),
+                })
+                .with_line_break_mode(LineBreaking::WordWrap),
                 0.0,
             )
             .with_default_spacer()
