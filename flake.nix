@@ -3,7 +3,7 @@
   description = "Dev shell";
 
   inputs = {
-    nixpkgs.url      = "github:NixOS/nixpkgs/nixos-22.11";
+    nixpkgs.url      = "github:NixOS/nixpkgs/nixos-24.11";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url  = "github:numtide/flake-utils";
   };
@@ -22,7 +22,7 @@
           buildInputs = [
             openssl
             pkg-config
-            (rust-bin.stable."1.69.0".default.override {
+            (rust-bin.stable."1.84.1".default.override {
               extensions = ["rust-analyzer" "rust-src"];
             })
             gtk3
