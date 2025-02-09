@@ -82,7 +82,7 @@ pub fn build_device_details() -> impl Widget<AppState> {
     let pre_channels = Either::new(
         |d: &Device, _env: &_| !d.pre_channels.is_empty(),
         Flex::column()
-            .with_flex_child(Label::new("Favorites:").expand_width(), 0.0)
+            .with_child(Label::new("Favorites:").expand_width())
             .with_flex_child(
                 Scroll::new(List::new(favorite_item).lens(lens::Identity.map(
                     |d: &Device| (d.clone(), d.pre_channels.clone()),
@@ -97,31 +97,25 @@ pub fn build_device_details() -> impl Widget<AppState> {
 
     let controls = Flex::row()
         .with_flex_spacer(1.0)
-        .with_flex_child(
-            control_button("<< Previous", PlayControlCommand::Previous),
-            0.0,
-        )
+        .with_child(control_button("<< Previous", PlayControlCommand::Previous))
         .with_default_spacer()
-        .with_flex_child(
-            control_button(
-                |d: &Device, _env: &_| {
-                    if d.play_status.as_ref().map(|x| *std::sync::Arc::clone(x))
-                        == Some(PlayControlCommand::Play)
-                    {
-                        "Pause"
-                    } else if d.play_status.is_some() {
-                        "Play"
-                    } else {
-                        "Play/Pause"
-                    }
-                    .to_owned()
-                },
-                PlayControlCommand::Toggle,
-            ),
-            0.0,
-        )
+        .with_child(control_button(
+            |d: &Device, _env: &_| {
+                if d.play_status.as_ref().map(|x| *std::sync::Arc::clone(x))
+                    == Some(PlayControlCommand::Play)
+                {
+                    "Pause"
+                } else if d.play_status.is_some() {
+                    "Play"
+                } else {
+                    "Play/Pause"
+                }
+                .to_owned()
+            },
+            PlayControlCommand::Toggle,
+        ))
         .with_default_spacer()
-        .with_flex_child(control_button("Next >>", PlayControlCommand::Next), 0.0)
+        .with_child(control_button("Next >>", PlayControlCommand::Next))
         .with_flex_spacer(1.0);
 
     let now_playing = Either::new(
@@ -134,8 +128,8 @@ pub fn build_device_details() -> impl Widget<AppState> {
                 > 0
         },
         Flex::column()
-            .with_flex_child(Label::new("Now playing:"), 0.0)
-            .with_flex_child(
+            .with_child(Label::new("Now playing:"))
+            .with_child(
                 Label::dynamic(|d: &Arc<PlayInfoData>, _| {
                     d.play_title
                         .as_ref()
@@ -143,9 +137,8 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .unwrap_or_default()
                 })
                 .with_line_break_mode(LineBreaking::WordWrap),
-                0.0,
             )
-            .with_flex_child(
+            .with_child(
                 Label::dynamic(|d: &Arc<PlayInfoData>, _| {
                     d.play_subtitle
                         .as_ref()
@@ -153,7 +146,6 @@ pub fn build_device_details() -> impl Widget<AppState> {
                         .unwrap_or_default()
                 })
                 .with_line_break_mode(LineBreaking::WordWrap),
-                0.0,
             )
             .with_default_spacer()
             .expand_width()
@@ -162,18 +154,17 @@ pub fn build_device_details() -> impl Widget<AppState> {
     );
 
     let details = Flex::column()
-        .with_flex_child(
+        .with_child(
             Flex::row()
-                .with_flex_child(Label::new("Volume"), 0.0)
+                .with_child(Label::new("Volume"))
                 .with_flex_child(volume_slider, 1.0)
                 .controller(VolumeController),
-            0.0,
         )
         .with_default_spacer()
         .with_flex_child(Flex::row().with_flex_child(pre_channels, 1.0), 1.0)
         .with_default_spacer()
-        .with_flex_child(Flex::row().with_flex_child(now_playing, 1.0), 0.0)
-        .with_flex_child(controls, 0.0);
+        .with_child(Flex::row().with_flex_child(now_playing, 1.0))
+        .with_child(controls);
 
     let page = widgets::page(
         |data: &Device| data.name.as_ref().unwrap_or(&data.id).to_owned(),

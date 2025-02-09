@@ -31,10 +31,10 @@ fn main() -> Result<(), PlatformError> {
     let device_manager = Arc::new(DeviceManager::new(DeviceManagerConfig::default()?)?);
     let device_manager_events = device_manager.listen();
 
-    let window = WindowDesc::new(build_ui).title("Libratone");
+    let window = WindowDesc::new(build_ui()).title("Libratone");
 
     let app = AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .delegate(Delegate {
             device_manager: Arc::clone(&device_manager),
         });

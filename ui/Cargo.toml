@@ -8,5 +8,5 @@ edition = "2021"
 name = "libratone_rs_ui"
 
 [dependencies]
-druid = { version = "0.7.0", features = ["im"] }
+druid = { version = "0.8.3", features = ["im"] }
 libratone-rs = { path = ".." }
