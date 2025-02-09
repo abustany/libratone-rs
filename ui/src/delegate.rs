@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use druid::{AppDelegate, Command, DelegateCtx, Env, Handled, Target};
+use druid::{AppDelegate, Application, Command, DelegateCtx, Env, Handled, Target};
 
 use super::appstate::{AppState, DeviceMap, Route};
 use super::commands::{DeviceUpdated, SendCommand, ShowDeviceDetails, ShowDeviceList};
@@ -47,5 +47,15 @@ impl AppDelegate<AppState> for Delegate {
         } else {
             Handled::No
         }
+    }
+
+    fn window_removed(
+        &mut self,
+        _id: druid::WindowId,
+        _data: &mut AppState,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
+    ) {
+        Application::global().quit();
     }
 }
